@@ -1,59 +1,94 @@
-[GlobalParams]
-	displacements = 'disp_x'
-[]
 
 [Mesh]
-	[wire]
+	[wire_mesh]
 		type = GeneratedMeshGenerator
 		dim = 1
-		nx = 100
 		xmin = 0
-		xmax = 0.1
-		boundary_id = '0 1'
-		bounday_name = 'left right'
+		xmax = 100
+		nx = 100
+		elem_type = EDGE2
 	[]
 []
 
-[Physics/SolidMechanics/Quasistatic]
-	[all]
-		add_variables = true
+[Variables]
+	[disp_x]
+		order = FIRST
+		family = LAGRANGE
+	[]
+[]
+
+[Kernels]
+	[stress_divergence]
+		type = StressDivergenceTensors
+		variable = disp_x
+		displacements = 'disp_x'
+		component = 0
 	[]
 []
 
 [Materials]
 	[elasticity]
-		type = ComputeIsotropicElasticityTensor
+		type = ComputeLinearElasticityTensors
 		youngs_modulus = 200e9
 		poissons_ratio = 0.3
 	[]
+	[strain]
+		type = ComputeSmallStrain
+		displacements = 'disp_x'
+	[]
 	[stress]
 		type = ComputeLinearElasticStress
-		elasticity_tensor = elasticity
 	[]
 []
 
 [BCs]
-	[left]
+	[fix_left]
 		type = DirichletBC
 		boundary = left
 		variable = disp_x
 		value = 0
 	[]
-	[right_pressure]
-		type = Pressure
+	[tension_force_right]
+		type = NeumannBC
 		variable = disp_x
 		boundary = right
-		factor = 100e6
+		value = -50
+	[]
+[]
+
+[Preconditioning]
+	[SMP]
+		type = SMP
+		full = true
 	[]
 []
 
 [Executioner]
 	type = Steady
 	solve_type = 'NEWTON'
-	nonlinear_solver = 'PJFNK'
+	nl_rel_tol = 1e-8
+  	nl_abs_tol = 1e-10
 []
 
 [Outputs]
 	exodus = true
+	csv = true
+[]
+
+[Postprocessors]
+	[max_displacement]
+		type = NodalExtremeValue
+		variable = disp_x
+	[]
+
+	[max_stress]
+		type = ElementExtremeValue
+		variable = stress_xx
+	[]
+
+	[avg_strain]
+		type = ElementAverageValue
+		variable = strain_xx
+	[]
 []
 
