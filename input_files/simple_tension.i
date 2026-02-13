@@ -1,3 +1,32 @@
+[AuxVariables]
+	[stress_xx]
+		order = CONSTANT
+		family = MONOMIAL
+	[]
+	[strain_xx]
+		order = CONSTANT
+		family = MONOMIAL
+	[]
+[]
+
+[AuxKernels]
+	[stress_xx_aux]
+		type = RankTwoAux
+		variable = stress_xx
+    		rank_two_tensor = stress
+    		index_i = 0
+    		index_j = 0
+    		execute_on = timestep_end
+  	[]
+  	[strain_xx_aux]
+    		type = RankTwoAux
+    		variable = strain_xx
+    		rank_two_tensor = mechanical_strain 
+    		index_i = 0
+    		index_j = 0
+    		execute_on = timestep_end
+  	[]
+[]
 
 [Mesh]
 	[wire_mesh]
@@ -28,7 +57,7 @@
 
 [Materials]
 	[elasticity]
-		type = ComputeLinearElasticityTensors
+		type = ComputeIsotropicElasticityTensor
 		youngs_modulus = 200e9
 		poissons_ratio = 0.3
 	[]
@@ -52,7 +81,7 @@
 		type = NeumannBC
 		variable = disp_x
 		boundary = right
-		value = -50
+		value = 5e7
 	[]
 []
 
