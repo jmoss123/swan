@@ -19,70 +19,85 @@
     elem_type = QUAD4
     boundary_name_prefix = bobbin
   []
+  [bobbin_id]
+    type = RenameBlockGenerator
+    input = bobbin
+    old_block = '0'
+    new_block = '1'
+    new_block_name = 'bobbin'
+  []
   
-  # 1D wire - needs to be in 2D space for contact
+  # 2D wire (50mm long x 1mm diameter))
   # Wire extends from feed point to bobbin attachment
   [wire]
     type = GeneratedMeshGenerator
-    dim = 1
+    dim = 2
     xmin = 16.5      	# Starts at bobbin vertex
     xmax = 66.5    		# Extends to feed point (50mm length)
+	ymin = 16.25 		# Centered at y=16.5 (bobbin vertex)
+	ymax = 16.75		# 1mm diameter
     nx = 50		 		# 1mm element size along wire
-    elem_type = EDGE2
+	ny = 2 				# 2 elements through thickness
+    elem_type = QUAD4
     boundary_name_prefix = wire
     boundary_id_offset = 10 	# Avoid ID conflicts with bobbin boundaries
+  []
+  [wire_id]
+    type = RenameBlockGenerator
+    input = wire
+    old_block = '0'
+    new_block = '2'
+    new_block_name = 'wire'
   []
   
   # Combine bobbin and wire meshes into single mesh for contact and constraints
   [combined]
-    type = CombinerGenerator #
-    inputs = 'bobbin wire' 
-  []
-  
-  # Assign block IDs 
-  [bobbin_block]
-    type = SubdomainBoundingBoxGenerator 
-    input = combined
-    block_id = 1
-    block_name = 'bobbin'
-    bottom_left = '-16.5 -16.5 0' 
-    top_right = '16.5 16.5 0'
-  []
-  
-  [wire_block]
-    type = SubdomainBoundingBoxGenerator
-    input = bobbin_block
-    block_id = 2
-    block_name = 'wire'
-    bottom_left = '16.5 -1 0'
-    top_right = '66.5 1 0'
+    type = CombinerGenerator
+    inputs = 'bobbin_id wire_id' 
   []
   
   # Create nodeset for tied connection point (bobbin top-right vertex)
   [tie_point_bobbin]
     type = ExtraNodesetGenerator
-    input = wire_block
+    input = combined
     new_boundary = 'tie_point_bobbin'
     coord = '16.5 16.5 0'
-    tolerance = 0.1
+    tolerance = 0.5
   []
   
-  # Wire attachment point (left end of wire)
+  # Wire attachment nodes (left edge of wire at bobbin vertex)
   [tie_point_wire]
     type = BoundingBoxNodeSetGenerator
     input = tie_point_bobbin
     new_boundary = 'tie_point_wire'
-    bottom_left = '16.4 -0.5 0'
-    top_right = '16.6 0.5 0'
+    bottom_left = '16.4 16.2 0'
+    top_right = '16.6 16.8 0'
   []
   
-  # Wire feed point (right end)
-  [feed_point]
-    type = BoundingBoxNodeSetGenerator
+  # Wire left edge boundary for contact
+  [wire_left_boundary]
+    type = SideSetsAroundSubdomainGenerator
     input = tie_point_wire
-    new_boundary = 'feed_point'
-    bottom_left = '66 -0.5 0'
-    top_right = '67 0.5 0'
+    new_boundary = 'wire_left_side'
+    block = 'wire'
+    normal = '-1 0 0'
+  []
+
+  # Bobbin right edge boundary for contact
+  [bobbin_right_boundary]
+	type = SideSetsAroundSubdomainGenerator
+	input = wire_left_boundary
+	new_boundary = 'bobbin_right_side'
+	block = 'bobbin'
+	normal = '1 0 0'
+  []
+  # Wire feed point boundary (right edge of wire)
+  [feed_point]
+	type = BoundingBoxNodeSetGenerator
+	input = bobbin_right_boundary
+	new_boundary = 'feed_point'
+	bottom_left = '66.4 16.2 0'
+	top_right = '66.6 16.8 0'
   []
 []
 
@@ -94,14 +109,33 @@
 []
 
 [AuxVariables]
+  # Stresses 
   [stress_xx]
     order = CONSTANT
     family = MONOMIAL
   []
+  [stress_yy]           
+    order = CONSTANT
+    family = MONOMIAL
+  []
+  [stress_xy]           
+    order = CONSTANT
+    family = MONOMIAL
+  []
+  # Strains
   [strain_xx]
     order = CONSTANT
     family = MONOMIAL
   []
+  [strain_yy]          
+    order = CONSTANT
+    family = MONOMIAL
+  []
+  [strain_xy]          
+    order = CONSTANT
+    family = MONOMIAL
+  []
+
   [vonmises]
     order = CONSTANT
     family = MONOMIAL
@@ -117,6 +151,7 @@
 []
 
 [AuxKernels]
+  # Stresses
   [stress_xx_aux]
     type = RankTwoAux
     variable = stress_xx
@@ -124,6 +159,22 @@
     index_i = 0
     index_j = 0
   []
+  [stress_yy_aux]
+    type = RankTwoAux
+    variable = stress_yy
+    rank_two_tensor = stress
+    index_i = 1
+    index_j = 1
+  []
+  [stress_xy_aux]
+    type = RankTwoAux
+    variable = stress_xy
+    rank_two_tensor = stress
+    index_i = 0
+    index_j = 1
+  []
+
+  # Strains
   [strain_xx_aux]
     type = RankTwoAux
     variable = strain_xx
@@ -131,12 +182,28 @@
     index_i = 0
     index_j = 0
   []
+  [strain_yy_aux]      # ADD THIS
+    type = RankTwoAux
+    variable = strain_yy
+    rank_two_tensor = mechanical_strain
+    index_i = 1
+    index_j = 1
+  []
+  [strain_xy_aux]      # ADD THIS
+    type = RankTwoAux
+    variable = strain_xy
+    rank_two_tensor = mechanical_strain
+    index_i = 0
+    index_j = 1
+  []
+
   [vonmises_aux]
     type = RankTwoScalarAux
     variable = vonmises
     rank_two_tensor = stress
     scalar_type = VonMisesStress
   []
+
   [reaction_x]
     type = PenaltyReactionAux
     variable = react_x
@@ -270,13 +337,12 @@
 
 [Contact]
   # Frictional contact between wire and bobbin surfaces
-  # Note: This requires wire to be 2D or use specialized contact
-  [wire_bobbin_friction]
-    primary = bobbin_right    # Bobbin surface
-    secondary = wire_left      # Wire surface closest to bobbin
+  [wire_bobbin_contact]
+    primary = bobbin_right_side    # Bobbin right surface
+    secondary = wire_left_side     # Wire left surface
     model = coulomb
     formulation = penalty
-    friction_coefficient = 0.8  # High friction = "rough" contact
+    friction_coefficient = 0.6     # Realistic wire-on-plastic friction
     penalty = 1e9
     normalize_penalty = true
   []
@@ -297,7 +363,7 @@
     function = rotate_y
   []
   
-  # Wire feed point - fixed in space, stress-free (infinite wire supply)
+  # Wire feed point - fixed in space (infinite wire supply)
   [feed_fixed_x]
     type = DirichletBC
     variable = disp_x
@@ -307,14 +373,6 @@
   [feed_fixed_y]
     type = DirichletBC
     variable = disp_y
-    boundary = feed_point
-    value = 0
-  []
-  
-  # Zero traction at feed point (no effect on stress/strain)
-  [feed_stress_free_x]
-    type = NeumannBC
-    variable = disp_x
     boundary = feed_point
     value = 0
   []
@@ -357,6 +415,12 @@
   csv = true
   print_linear_residuals = false
   interval = 5  # Output every 5 timesteps
+
+  [mesh_out]
+    type = Exodus
+    execute_on = 'INITIAL'
+    file_base = 'mesh_check'
+  []
 []
 
 [Postprocessors]
@@ -389,6 +453,8 @@
     variable = disp_y
     boundary = tie_point_wire
   []
+
+  # Wire tension at feed point
   [tension_feed_x]
     type = NodalSum
     variable = react_x
@@ -404,6 +470,14 @@
     type = ParsedPostprocessor
     expression = 'sqrt(fx^2 + fy^2)'
     pp_names = 'tension_feed_x tension_feed_y'
+  []
+
+  # Convergence monitoring
+  [nonlinear_its]
+    type = NumNonlinearIterations
+  []
+  [linear_its]
+    type = NumLinearIterations
   []
 []
 
