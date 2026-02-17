@@ -23,8 +23,7 @@
     type = RenameBlockGenerator
     input = bobbin
     old_block = '0'
-    new_block = '1'
-    new_block_name = 'bobbin'
+    new_block = '1 bobbin'	# Format: 'ID name'
   []
   
   # 2D wire (50mm long x 1mm diameter))
@@ -46,8 +45,7 @@
     type = RenameBlockGenerator
     input = wire
     old_block = '0'
-    new_block = '2'
-    new_block_name = 'wire'
+    new_block = '2 wire'	# Format: 'ID name'
   []
   
   # Combine bobbin and wire meshes into single mesh for contact and constraints
@@ -296,19 +294,19 @@
 [Constraints]
   # Tied connection between wire and bobbin vertex
   # This bonds the wire end to the rotating bobbin point
-  [tie_wire_to_bobbin_x]
-    type = EqualValueBoundaryConstraint
+  [tie_x]
+    type = TiedValueConstraint
     variable = disp_x
-    primary = tie_point_wire
-    secondary = tie_point_bobbin
-    penalty = 1e12
+    primary_boundary = tie_point_bobbin
+    secondary_boundary = tie_point_wire
+    secondary_variable = disp_x
   []
-  [tie_wire_to_bobbin_y]
-    type = EqualValueBoundaryConstraint
+  [tie_y]
+    type = TiedValueConstraint
     variable = disp_y
-    primary = tie_point_wire
-    secondary = tie_point_bobbin
-    penalty = 1e12
+    primary_boundary = tie_point_bobbin
+    secondary_boundary = tie_point_wire
+    secondary_variable = disp_y
   []
 []
 
