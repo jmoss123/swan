@@ -135,20 +135,12 @@
     order = CONSTANT
     family = MONOMIAL
   []
-
   [vonmises]
     order = CONSTANT
     family = MONOMIAL
   []
-  [react_x]
-    order = FIRST
-    family = LAGRANGE
-  []
-  [react_y]
-    order = FIRST
-    family = LAGRANGE
-  []
 []
+
 
 [AuxKernels]
   # Stresses
@@ -173,7 +165,7 @@
     index_i = 0
     index_j = 1
   []
-
+  
   # Strains
   [strain_xx_aux]
     type = RankTwoAux
@@ -182,41 +174,26 @@
     index_i = 0
     index_j = 0
   []
-  [strain_yy_aux]      # ADD THIS
+  [strain_yy_aux]
     type = RankTwoAux
     variable = strain_yy
     rank_two_tensor = mechanical_strain
     index_i = 1
     index_j = 1
   []
-  [strain_xy_aux]      # ADD THIS
+  [strain_xy_aux]
     type = RankTwoAux
     variable = strain_xy
     rank_two_tensor = mechanical_strain
     index_i = 0
     index_j = 1
   []
-
+  
   [vonmises_aux]
     type = RankTwoScalarAux
     variable = vonmises
     rank_two_tensor = stress
     scalar_type = VonMisesStress
-  []
-
-  [reaction_x]
-    type = PenaltyReactionAux
-    variable = react_x
-    x_disp = disp_x
-    y_disp = disp_y
-    execute_on = timestep_end
-  []
-  [reaction_y]
-    type = PenaltyReactionAux
-    variable = react_y
-    x_disp = disp_x
-    y_disp = disp_y
-    execute_on = timestep_end
   []
 []
 
@@ -453,25 +430,28 @@
     variable = disp_y
     boundary = tie_point_wire
   []
-
-  # Wire tension at feed point
-  [tension_feed_x]
-    type = NodalSum
-    variable = react_x
-    boundary = feed_point
-  []
-  [tension_feed_y]
-    type = NodalSum
-    variable = react_y
-    boundary = feed_point
+  
+  # Wire tension calculated from stress at feed boundary
+  [feed_stress_xx_avg]
+    type = SideAverageValue
+    variable = stress_xx
+    boundary = 'wire_right'
   []
   
+  [feed_stress_yy_avg]
+    type = SideAverageValue
+    variable = stress_yy
+    boundary = 'wire_right'
+  []
+  
+  # Approximate tension magnitude (stress * cross-section area)
+  # Wire area = 0.5mm thickness * 1mm (out-of-plane) = 0.5 mm^2
   [tension_magnitude]
     type = ParsedPostprocessor
-    expression = 'sqrt(fx^2 + fy^2)'
-    pp_names = 'tension_feed_x tension_feed_y'
+    expression = 'sqrt(sx^2 + sy^2) * 0.5'
+    pp_names = 'feed_stress_xx_avg feed_stress_yy_avg'
   []
-
+  
   # Convergence monitoring
   [nonlinear_its]
     type = NumNonlinearIterations
