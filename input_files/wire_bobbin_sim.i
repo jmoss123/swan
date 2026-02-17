@@ -292,23 +292,21 @@
 []
 
 [Constraints]
-  # Tied connection between wire and bobbin vertex
-  # This bonds the wire end to the rotating bobbin point
   [tie_x]
     type = TiedValueConstraint
     variable = disp_x
-    primary_boundary = tie_point_bobbin
-    secondary_boundary = tie_point_wire
-    secondary_variable = disp_x
+    primary = tie_point_bobbin        
+    secondary = tie_point_wire        
   []
+  
   [tie_y]
     type = TiedValueConstraint
     variable = disp_y
-    primary_boundary = tie_point_bobbin
-    secondary_boundary = tie_point_wire
-    secondary_variable = disp_y
+    primary = tie_point_bobbin        
+    secondary = tie_point_wire        
   []
 []
+
 
 [Contact]
   # Frictional contact between wire and bobbin surfaces
@@ -386,10 +384,15 @@
 []
 
 [Outputs]
-  exodus = true
-  csv = true
+  [exodus]
+    type = Exodus
+    interval = 5
+  []
+  [csv]
+    type = CSV
+    interval = 5
+  []
   print_linear_residuals = false
-  interval = 5  # Output every 5 timesteps
 
   [mesh_out]
     type = Exodus
@@ -443,10 +446,10 @@
   []
   
   # Approximate tension magnitude (stress * cross-section area)
-  # Wire area = 0.5mm thickness * 1mm (out-of-plane) = 0.5 mm^2
+  # Wire area = pi * (0.5)^2 = 0.7854 mm^2
   [tension_magnitude]
     type = ParsedPostprocessor
-    expression = 'sqrt(sx^2 + sy^2) * 0.5'
+    expression = 'sqrt(feed_stress_xx_avg^2 + feed_stress_yy_avg^2) * 0.7854'
     pp_names = 'feed_stress_xx_avg feed_stress_yy_avg'
   []
   
