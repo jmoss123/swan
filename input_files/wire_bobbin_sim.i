@@ -23,7 +23,7 @@
     type = RenameBlockGenerator
     input = bobbin
     old_block = '0'
-    new_block = '1 bobbin'	# Format: 'ID name'
+    new_block = '1'
   []
   
   # 2D wire (50mm long x 1mm diameter))
@@ -45,7 +45,7 @@
     type = RenameBlockGenerator
     input = wire
     old_block = '0'
-    new_block = '2 wire'	# Format: 'ID name'
+    new_block = '2'
   []
   
   # Combine bobbin and wire meshes into single mesh for contact and constraints
