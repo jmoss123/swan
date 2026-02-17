@@ -77,7 +77,7 @@
     type = SideSetsAroundSubdomainGenerator
     input = tie_point_wire
     new_boundary = 'wire_left_side'
-    block = 'wire'
+    block = '2'
     normal = '-1 0 0'
   []
 
@@ -86,7 +86,7 @@
 	type = SideSetsAroundSubdomainGenerator
 	input = wire_left_boundary
 	new_boundary = 'bobbin_right_side'
-	block = 'bobbin'
+	block = '1'
 	normal = '1 0 0'
   []
   # Wire feed point boundary (right edge of wire)
@@ -233,13 +233,13 @@
     type = StressDivergenceTensors
     variable = disp_x
     component = 0
-    block = bobbin
+    block = '1'
   []
   [bobbin_stress_y]
     type = StressDivergenceTensors
     variable = disp_y
     component = 1
-    block = bobbin
+    block = '1'
   []
   
   # Wire mechanics
@@ -247,13 +247,13 @@
     type = StressDivergenceTensors
     variable = disp_x
     component = 0
-    block = wire
+    block = '2'
   []
   [wire_stress_y]
     type = StressDivergenceTensors
     variable = disp_y
     component = 1
-    block = wire
+    block = '2'
   []
 []
 
@@ -263,15 +263,15 @@
     type = ComputeIsotropicElasticityTensor
     youngs_modulus = 200e12  # 1000x stiffer than wire
     poissons_ratio = 0.3
-    block = bobbin
+    block = '1'
   []
   [bobbin_strain]
     type = ComputeSmallStrain
-    block = bobbin
+    block = '1'
   []
   [bobbin_stress]
     type = ComputeLinearElasticStress
-    block = bobbin
+    block = '1'
   []
   
   # Wire material (copper)
@@ -279,15 +279,15 @@
     type = ComputeIsotropicElasticityTensor
     youngs_modulus = 200e9
     poissons_ratio = 0.3
-    block = wire
+    block = '2'
   []
   [wire_strain]
     type = ComputeSmallStrain
-    block = wire
+    block = '2'
   []
   [wire_stress]
     type = ComputeLinearElasticStress
-    block = wire
+    block = '2'
   []
 []
 
@@ -402,17 +402,17 @@
   [wire_max_stress]
     type = ElementExtremeValue
     variable = stress_xx
-    block = wire
+    block = '2'
   []
   [wire_avg_strain]
     type = ElementAverageValue
     variable = strain_xx
-    block = wire
+    block = '2'
   []
   [wire_max_vonmises]
     type = ElementExtremeValue
     variable = vonmises
-    block = wire
+    block = '2'
   []
   [bobbin_rotation_angle]
     type = FunctionValuePostprocessor
