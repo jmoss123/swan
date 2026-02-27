@@ -261,16 +261,16 @@
   # Bobbin material (very stiff = quasi-rigid)
   [bobbin_elasticity]
     type = ComputeIsotropicElasticityTensor
-    youngs_modulus = 200e12  # 1000x stiffer than wire
+    youngs_modulus = 200e12    # Modelling as rigid body
     poissons_ratio = 0.3
     block = '1'
   []
   [bobbin_strain]
-    type = ComputeSmallStrain
+    type = ComputeFiniteStrain
     block = '1'
   []
   [bobbin_stress]
-    type = ComputeLinearElasticStress
+    type = ComputeFiniteStrainElasticStress
     block = '1'
   []
   
@@ -282,42 +282,74 @@
     block = '2'
   []
   [wire_strain]
-    type = ComputeSmallStrain
+    type = ComputeFiniteStrain
     block = '2'
   []
   [wire_stress]
-    type = ComputeLinearElasticStress
+    type = ComputeFiniteStrainElasticStress
     block = '2'
   []
 []
 
 [Constraints]
   [tie_x]
-    type = TiedValueConstraint
+    type = NodalStickConstraint
     variable = disp_x
-    primary = tie_point_bobbin        
-    secondary = tie_point_wire        
+    boundary = tie_point_bobbin        
+    secondary = tie_point_wire
+    penalty = 1e12        
   []
   
   [tie_y]
-    type = TiedValueConstraint
+    type = NodalStickConstraint
     variable = disp_y
-    primary = tie_point_bobbin        
-    secondary = tie_point_wire        
+    boundary = tie_point_bobbin        
+    secondary = tie_point_wire
+    penalty = 1e12        
   []
 []
 
+[Problem]
+  type = AugmentedLagrangianContactProblem
+  maximum_lagrangian_update_iterations = 20
+[]
 
 [Contact]
-  # Frictional contact between wire and bobbin surfaces
-  [wire_bobbin_contact]
-    primary = bobbin_right_side    # Bobbin right surface
-    secondary = wire_left_side     # Wire left surface
-    model = coulomb
-    formulation = penalty
-    friction_coefficient = 0.6     # Realistic wire-on-plastic friction
-    penalty = 1e9
-    normalize_penalty = true
+  # Frictionless contact between wire and bobbin surfaces
+  [wire_bobbin_top]
+    primary = 'bobbin_top'    # Bobbin surfaces
+    secondary = 'wire_bottom'          # Wire surfaces
+    model = frictionless
+    formulation = augmented_lagrange
+    penalty = 1e6
+    al_penetration_tolerance = 1e-4
+  []
+
+  [wire_bobbin_right]
+    primary = 'bobbin_right'    # Bobbin surfaces
+    secondary = 'wire_bottom'          # Wire surfaces
+    model = frictionless
+    formulation = augmented_lagrange
+    penalty = 1e6
+    al_penetration_tolerance = 1e-4
+  []
+
+  [wire_bobbin_left]
+    primary = 'bobbin_left'    # Bobbin surfaces
+    secondary = 'wire_bottom'          # Wire surfaces
+    model = frictionless
+    formulation = augmented_lagrange
+    penalty = 1e6
+    al_penetration_tolerance = 1e-4
+  []
+
+  [wire_bobbin_bottom]
+    primary = 'bobbin_bottom'    # Bobbin surfaces
+    secondary = 'wire_bottom'          # Wire surfaces
+    model = frictionless
+    formulation = augmented_lagrange
+    penalty = 1e6
+    al_penetration_tolerance = 1e-4
   []
 []
 
@@ -363,20 +395,27 @@
   solve_type = NEWTON
   
   # Time stepping - 1 second = 1 full rotation
-  dt = 0.01
-  end_time = 1.0
-  
-  # Solver settings for contact problems
-  petsc_options_iname = '-pc_type -pc_factor_mat_solver_package -snes_linesearch_type'
-  petsc_options_value = 'lu       superlu_dist                  basic'
+  dt = 0.0005
+  end_time = 0.1
   
   # Relaxed tolerances for contact
   nl_rel_tol = 1e-5
-  nl_abs_tol = 1e-7
+  nl_abs_tol = 1e-4
   nl_max_its = 50
   
-  l_max_its = 100
+  l_max_its = 200
   l_tol = 1e-4
+
+  petsc_options_iname = '-pc_type -pc_factor_shift_type -snes_linesearch_type'
+  petsc_options_value = 'lu	NONZERO			bt'
+
+  [TimeStepper]
+    type = IterationAdaptiveDT
+    dt = 0.0005
+    cutback_factor = 0.25
+    growth_factor = 1.1
+    optimal_iterations = 15
+  []
   
   # Automatic scaling helps with stiff bobbin
   automatic_scaling = true
