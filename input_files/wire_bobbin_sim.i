@@ -30,7 +30,7 @@
   [flag_interior]
     type = ParsedSubdomainMeshGenerator
     input = bobbin_id
-    combinatorial_geometry = '(x > -14.5) & (x < 14.5) & (y > -14.5) & (y < 14.5)'
+    combinatorial_geometry = '(x > -15.5) & (x < 15.5) & (y > -15.5) & (y < 15.5)'
     block_id = '99'
     block_name = 'bobbin_interior'
   []
