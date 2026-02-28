@@ -23,14 +23,14 @@
     type = RenameBlockGenerator
     input = bobbin
     old_block = '0'
-    new_block = 'bobbin_skin'
+    new_block = '1'
   []
 
   # Tag all interior elements for deletion
   [flag_interior]
     type = ParsedSubdomainMeshGenerator
     input = bobbin_id
-    combinatorial_geometry = '(x > -15.5) & (x < 15.5) & (y > -15.5) & (y < 15.5)'
+    combinatorial_geometry = '(x > -14.5) & (x < 14.5) & (y > -14.5) & (y < 14.5)'
     block_id = '99'
     block_name = 'bobbin_interior'
   []
@@ -68,7 +68,7 @@
     type = RenameBlockGenerator
     input = wire_positioned
     old_block = '0'
-    new_block = 'wire'
+    new_block = '2'
   []
   
   # Combine bobbin and wire meshes into single mesh for contact and constraints
