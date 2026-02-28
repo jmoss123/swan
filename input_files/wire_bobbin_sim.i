@@ -35,7 +35,7 @@
     block_name = 'bobbin_interior'
   []
 
-  # Delete th interior block
+  # Delete the interior block
   [bobbin_perimeter]
     type = BlockDeletionGenerator
     input = flag_interior
@@ -76,11 +76,20 @@
     type = CombinerGenerator
     inputs = 'bobbin_perimeter wire_id' 
   []
+
+  # Wire contact nodes (all beam nodes) - secondary surface
+  [wire_contact_nodes]
+    type = BoundingBoxNodeSetGenerator
+    input = combined
+    new_boundary = 'wire_nodes'
+    bottom_left = '16.4 16.4 0'
+    top_right = '66.6 16.6 0'
+  []
   
   # Create nodeset for tied connection point (bobbin top-right vertex)
   [tie_point_bobbin]
     type = ExtraNodesetGenerator
-    input = combined
+    input = wire_contact_nodes
     new_boundary = 'tie_point_bobbin'
     coord = '16.5 16.5 0'
     tolerance = 0.1
@@ -254,12 +263,14 @@
     variable = disp_x
     component = 0
     block = '2'
+    use_displaced_mesh = false
   []
   [wire_stress_y]
     type = StressDivergenceTensors
     variable = disp_y
     component = 1
     block = '2'
+    use_displaced_mesh = false
   []
 []
 
@@ -280,19 +291,15 @@
     block = '1'
   []
   
-  # Wire material (copper)
+  # Wire material (1D copper beam)
   [wire_elasticity]
     type = ComputeIsotropicElasticityTensor
     youngs_modulus = 200e9
     poissons_ratio = 0.3
     block = '2'
   []
-  [wire_strain]
-    type = ComputeFiniteStrain
-    block = '2'
-  []
   [wire_stress]
-    type = ComputeFiniteStrainElasticStress
+    type = ComputeLinearElasticStress
     block = '2'
   []
 []
@@ -313,47 +320,15 @@
   []
 []
 
-[Problem]
-  type = AugmentedLagrangianContactProblem
-  maximum_lagrangian_update_iterations = 20
-[]
-
 [Contact]
   # Frictionless contact between wire and bobbin surfaces
-  [wire_bobbin_top]
-    primary = 'bobbin_top'    # Bobbin surfaces
-    secondary = 'wire_bottom'          # Wire surfaces
+  [wire_bobbin]
+    primary = 'bobbin_inner_surface'
+    secondary = 'wire_nodes'
     model = frictionless
-    formulation = augmented_lagrange
-    penalty = 1e6
-    al_penetration_tolerance = 1e-4
-  []
-
-  [wire_bobbin_right]
-    primary = 'bobbin_right'    # Bobbin surfaces
-    secondary = 'wire_bottom'          # Wire surfaces
-    model = frictionless
-    formulation = augmented_lagrange
-    penalty = 1e6
-    al_penetration_tolerance = 1e-4
-  []
-
-  [wire_bobbin_left]
-    primary = 'bobbin_left'    # Bobbin surfaces
-    secondary = 'wire_bottom'          # Wire surfaces
-    model = frictionless
-    formulation = augmented_lagrange
-    penalty = 1e6
-    al_penetration_tolerance = 1e-4
-  []
-
-  [wire_bobbin_bottom]
-    primary = 'bobbin_bottom'    # Bobbin surfaces
-    secondary = 'wire_bottom'          # Wire surfaces
-    model = frictionless
-    formulation = augmented_lagrange
-    penalty = 1e6
-    al_penetration_tolerance = 1e-4
+    formulation = mortar
+    normalize_penalty = true
+    penalty = 1e9
   []
 []
 
@@ -362,13 +337,13 @@
   [bobbin_rotate_x]
     type = FunctionDirichletBC
     variable = disp_x
-    boundary = 'bobbin_left bobbin_right bobbin_top bobbin_bottom'
+    boundary = 'bobbin_inner_surface'
     function = rotate_x
   []
   [bobbin_rotate_y]
     type = FunctionDirichletBC
     variable = disp_y
-    boundary = 'bobbin_left bobbin_right bobbin_top bobbin_bottom'
+    boundary = 'bobbin_inner_surface'
     function = rotate_y
   []
   
@@ -475,25 +450,19 @@
     boundary = tie_point_wire
   []
   
-  # Wire tension calculated from stress at feed boundary
-  [feed_stress_xx_avg]
-    type = SideAverageValue
+  # Wire tension: nodal stress at feed point (1D beam)
+  [feed_axial_force]
+    type = NodalSumValue
     variable = stress_xx
-    boundary = 'wire_right'
-  []
-  
-  [feed_stress_yy_avg]
-    type = SideAverageValue
-    variable = stress_yy
-    boundary = 'wire_right'
+    boundary = feed_point
   []
   
   # Approximate tension magnitude (stress * cross-section area)
   # Wire area = pi * (0.5)^2 = 0.7854 mm^2
   [tension_magnitude]
     type = ParsedPostprocessor
-    expression = 'sqrt(feed_stress_xx_avg^2 + feed_stress_yy_avg^2) * 0.7854'
-    pp_names = 'feed_stress_xx_avg feed_stress_yy_avg'
+    expression = 'feed_axial_force * 0.7854'
+    pp_names = 'feed_axial_force'
   []
   
   # Convergence monitoring
