@@ -328,7 +328,6 @@
     model = frictionless
     formulation = mortar
     normalize_penalty = true
-    penalty = 1e9
   []
 []
 
