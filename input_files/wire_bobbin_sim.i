@@ -6,7 +6,7 @@
 []
 
 [Mesh]
-  # 2D square bobbin (33mm x 33mm, centered at origin)
+  # BOBBIN: Perimeter skin mesh (1mm wall, hollow interior)
   [bobbin]
     type = GeneratedMeshGenerator
     dim = 2
@@ -23,35 +23,58 @@
     type = RenameBlockGenerator
     input = bobbin
     old_block = '0'
-    new_block = '1'
+    new_block = 'bobbin_skin'
+  []
+
+  # Tag all interior elements for deletion
+  [flag_interior]
+    type = ParsedSubdomainMeshGenerator
+    input = bobbin_id
+    combinatorial_geometry = '(x > -15.5) & (x < 15.5) & (y > -15.5) & (y < 15.5)'
+    block_id = '99'
+    block_name = 'bobbin_interior'
+  []
+
+  # Delete th interior block
+  [bobbin_perimeter]
+    type = BlockDeletionGenerator
+    input = flag_interior
+    block = 'bobbin_interior'
+    new_boundary = 'bobbin_inner_surface'
   []
   
-  # 2D wire (50mm long x 1mm diameter))
-  # Wire extends from feed point to bobbin attachment
-  [wire]
+  # WIRE: 1D Timoshenko beam elements (EDGE2)
+  [wire_raw]
     type = GeneratedMeshGenerator
-    dim = 2
+    dim = 1
     xmin = 16.5      	# Starts at bobbin vertex
     xmax = 66.5    		# Extends to feed point (50mm length)
-	ymin = 16.25 		# Centered at y=16.5 (bobbin vertex)
-	ymax = 16.75		# 1mm diameter
     nx = 50		 		# 1mm element size along wire
-	ny = 2 				# 2 elements through thickness
-    elem_type = QUAD4
+    elem_type = EDGE2
     boundary_name_prefix = wire
     boundary_id_offset = 10 	# Avoid ID conflicts with bobbin boundaries
   []
+
+  # Move wire from y=0 to y=16.5 (bobbin top-right corner height)
+  [wire_positioned]
+    type = TransformGenerator
+    input = wire_raw
+    transform = TRANSLATE
+    vector_value = '0 16.5 0'
+  []
+  
+  # Rename wire block to avoid ID conflicts with bobbin
   [wire_id]
     type = RenameBlockGenerator
-    input = wire
+    input = wire_positioned
     old_block = '0'
-    new_block = '2'
+    new_block = 'wire'
   []
   
   # Combine bobbin and wire meshes into single mesh for contact and constraints
   [combined]
     type = CombinerGenerator
-    inputs = 'bobbin_id wire_id' 
+    inputs = 'bobbin_perimeter wire_id' 
   []
   
   # Create nodeset for tied connection point (bobbin top-right vertex)
@@ -60,42 +83,25 @@
     input = combined
     new_boundary = 'tie_point_bobbin'
     coord = '16.5 16.5 0'
-    tolerance = 0.5
+    tolerance = 0.1
   []
   
   # Wire attachment nodes (left edge of wire at bobbin vertex)
   [tie_point_wire]
-    type = BoundingBoxNodeSetGenerator
+    type = ExtraNodesetGenerator
     input = tie_point_bobbin
     new_boundary = 'tie_point_wire'
-    bottom_left = '16.4 16.2 0'
-    top_right = '16.6 16.8 0'
+    coord = '16.5 16.5 0'
+    tolerance = 0.1
   []
   
-  # Wire left edge boundary for contact
-  [wire_left_boundary]
-    type = SideSetsAroundSubdomainGenerator
-    input = tie_point_wire
-    new_boundary = 'wire_left_side'
-    block = '2'
-    normal = '-1 0 0'
-  []
-
-  # Bobbin right edge boundary for contact
-  [bobbin_right_boundary]
-	type = SideSetsAroundSubdomainGenerator
-	input = wire_left_boundary
-	new_boundary = 'bobbin_right_side'
-	block = '1'
-	normal = '1 0 0'
-  []
   # Wire feed point boundary (right edge of wire)
   [feed_point]
-	type = BoundingBoxNodeSetGenerator
-	input = bobbin_right_boundary
-	new_boundary = 'feed_point'
-	bottom_left = '66.4 16.2 0'
-	top_right = '66.6 16.8 0'
+	  type = ExtraNodesetGenerator
+	  input = tie_point_wire
+	  new_boundary = 'feed_point'
+	  coord = '66.5 16.5 0'
+	  tolerance = 0.1
   []
 []
 
@@ -293,19 +299,17 @@
 
 [Constraints]
   [tie_x]
-    type = NodalStickConstraint
+    type = EqualValueConstraint
     variable = disp_x
-    boundary = tie_point_bobbin        
-    secondary = tie_point_wire
-    penalty = 1e12        
+    primary_boundary = tie_point_bobbin        
+    secondary_boundary = tie_point_wire       
   []
   
   [tie_y]
-    type = NodalStickConstraint
+    type = EqualValueConstraint
     variable = disp_y
-    boundary = tie_point_bobbin        
-    secondary = tie_point_wire
-    penalty = 1e12        
+    primary_boundary = tie_point_bobbin        
+    secondary_boundary = tie_point_wire       
   []
 []
 
