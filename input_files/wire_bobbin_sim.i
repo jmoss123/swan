@@ -7,6 +7,7 @@
 
 [Mesh]
   # BOBBIN: Perimeter skin mesh (1mm wall, hollow interior)
+  construct_side_list_from_node_list = true
   [bobbin]
     type = GeneratedMeshGenerator
     dim = 2
@@ -298,25 +299,13 @@
     poissons_ratio = 0.3
     block = '2'
   []
+  [wire_strain]
+    type = ComputeSmallStrain
+    block ='2'
+  []
   [wire_stress]
     type = ComputeLinearElasticStress
     block = '2'
-  []
-[]
-
-[Constraints]
-  [tie_x]
-    type = EqualValueConstraint
-    variable = disp_x
-    primary_boundary = tie_point_bobbin        
-    secondary_boundary = tie_point_wire       
-  []
-  
-  [tie_y]
-    type = EqualValueConstraint
-    variable = disp_y
-    primary_boundary = tie_point_bobbin        
-    secondary_boundary = tie_point_wire       
   []
 []
 
@@ -326,26 +315,27 @@
     primary = 'bobbin_inner_surface'
     secondary = 'wire_nodes'
     model = frictionless
-    formulation = mortar
+    formulation = penalty
+    penalty = 1e9
     normalize_penalty = true
   []
 []
 
 [BCs]
-  # Prescribe rigid body rotation to all bobbin nodes
+  # Prescribe rigid body rotation to all bobbin nodes and wire start nodes to avoid using constraints
   [bobbin_rotate_x]
     type = FunctionDirichletBC
     variable = disp_x
-    boundary = 'bobbin_inner_surface'
+    boundary = 'bobbin_inner_surface tie_point_wire'
     function = rotate_x
   []
   [bobbin_rotate_y]
     type = FunctionDirichletBC
     variable = disp_y
-    boundary = 'bobbin_inner_surface'
+    boundary = 'bobbin_inner_surface tie_point_wire'
     function = rotate_y
   []
-  
+
   # Wire feed point - fixed in space (infinite wire supply)
   [feed_fixed_x]
     type = DirichletBC
@@ -451,9 +441,9 @@
   
   # Wire tension: nodal stress at feed point (1D beam)
   [feed_axial_force]
-    type = NodalSumValue
+    type = PointValue
     variable = stress_xx
-    boundary = feed_point
+    point = '66.5 16.5 0'
   []
   
   # Approximate tension magnitude (stress * cross-section area)
