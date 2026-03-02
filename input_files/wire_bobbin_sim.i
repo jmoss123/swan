@@ -308,7 +308,7 @@
     secondary = 'wire_bottom'
     model = frictionless
     formulation = penalty
-    penalty = 1e9
+    penalty = 1e6
     normalize_penalty = true
   []
 []
@@ -355,8 +355,9 @@
   solve_type = NEWTON
   
   # Time stepping - 1 second = 1 full rotation
-  dt = 0.0005
-  end_time = 0.1
+  dt = 0.00005
+  end_time = 0.01
+  dtmin = 1e-8
   
   # Relaxed tolerances for contact
   nl_rel_tol = 1e-5
@@ -367,11 +368,12 @@
   l_tol = 1e-4
 
   petsc_options_iname = '-pc_type -pc_factor_shift_type -snes_linesearch_type'
-  petsc_options_value = 'lu	NONZERO			bt'
+  petsc_options_value  = 'lu       NONZERO               bt'
+  nl_forced_its = 1        # Force at least one iteration before cutback
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 0.0005
+    dt = 0.00005
     cutback_factor = 0.25
     growth_factor = 1.1
     optimal_iterations = 15
@@ -391,7 +393,7 @@
     type = CSV
     interval = 5
   []
-  print_linear_residuals = false
+  print_linear_residuals = true
 
   [mesh_out]
     type = Exodus
