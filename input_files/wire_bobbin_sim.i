@@ -7,7 +7,6 @@
 
 [Mesh]
   # BOBBIN: Perimeter skin mesh (1mm wall, hollow interior)
-  construct_side_list_from_node_list = true
   [bobbin]
     type = GeneratedMeshGenerator
     dim = 2
@@ -44,30 +43,25 @@
     new_boundary = 'bobbin_inner_surface'
   []
   
-  # WIRE: 1D Timoshenko beam elements (EDGE2)
-  [wire_raw]
+  # WIRE: Thin 2D
+  [wire]
     type = GeneratedMeshGenerator
-    dim = 1
+    dim = 2
     xmin = 16.5      	# Starts at bobbin vertex
     xmax = 66.5    		# Extends to feed point (50mm length)
+    ymin = 16.25 	# Centered at bobbin vertex height
+    ymax = 16.75
     nx = 50		 		# 1mm element size along wire
-    elem_type = EDGE2
+    ny = 1
+    elem_type = QUAD4
     boundary_name_prefix = wire
     boundary_id_offset = 10 	# Avoid ID conflicts with bobbin boundaries
-  []
-
-  # Move wire from y=0 to y=16.5 (bobbin top-right corner height)
-  [wire_positioned]
-    type = TransformGenerator
-    input = wire_raw
-    transform = TRANSLATE
-    vector_value = '0 16.5 0'
   []
   
   # Rename wire block to avoid ID conflicts with bobbin
   [wire_id]
     type = RenameBlockGenerator
-    input = wire_positioned
+    input = wire
     old_block = '0'
     new_block = '2'
   []
@@ -78,19 +72,19 @@
     inputs = 'bobbin_perimeter wire_id' 
   []
 
-  # Wire contact nodes (all beam nodes) - secondary surface
-  [wire_contact_nodes]
-    type = BoundingBoxNodeSetGenerator
+  # Wire bottom face - contact secondary surface
+  [wire_bottom_boundary]
+    type = SideSetsAroundSubdomainGenerator
     input = combined
-    new_boundary = 'wire_nodes'
-    bottom_left = '16.4 16.4 0'
-    top_right = '66.6 16.6 0'
+    new_boundary = 'wire_bottom'
+    block = '2'
+    normal = '0 -1 0'  # Normal facing downwards
   []
   
   # Create nodeset for tied connection point (bobbin top-right vertex)
   [tie_point_bobbin]
     type = ExtraNodesetGenerator
-    input = wire_contact_nodes
+    input = wire_bottom_boundary
     new_boundary = 'tie_point_bobbin'
     coord = '16.5 16.5 0'
     tolerance = 0.1
@@ -98,20 +92,20 @@
   
   # Wire attachment nodes (left edge of wire at bobbin vertex)
   [tie_point_wire]
-    type = ExtraNodesetGenerator
+    type = BoundingBoxNodeSetGenerator
     input = tie_point_bobbin
     new_boundary = 'tie_point_wire'
-    coord = '16.5 16.5 0'
-    tolerance = 0.1
+    bottom_left = '16.4 16.2 0'
+    top_right = '16.6 16.8 0'
   []
   
   # Wire feed point boundary (right edge of wire)
   [feed_point]
-	  type = ExtraNodesetGenerator
+	  type = BoundingBoxNodeSetGenerator
 	  input = tie_point_wire
 	  new_boundary = 'feed_point'
-	  coord = '66.5 16.5 0'
-	  tolerance = 0.1
+	  bottom_left = '66.4 16.2 0'
+	  top_right = '66.6 16.8 0'
   []
 []
 
@@ -264,14 +258,12 @@
     variable = disp_x
     component = 0
     block = '2'
-    use_displaced_mesh = false
   []
   [wire_stress_y]
     type = StressDivergenceTensors
     variable = disp_y
     component = 1
     block = '2'
-    use_displaced_mesh = false
   []
 []
 
@@ -300,11 +292,11 @@
     block = '2'
   []
   [wire_strain]
-    type = ComputeSmallStrain
+    type = ComputeFiniteStrain
     block ='2'
   []
   [wire_stress]
-    type = ComputeLinearElasticStress
+    type = ComputeFiniteStrainElasticStress
     block = '2'
   []
 []
@@ -313,7 +305,7 @@
   # Frictionless contact between wire and bobbin surfaces
   [wire_bobbin]
     primary = 'bobbin_inner_surface'
-    secondary = 'wire_nodes'
+    secondary = 'wire_bottom'
     model = frictionless
     formulation = penalty
     penalty = 1e9
