@@ -6,49 +6,25 @@
 []
 
 [Mesh]
-  # BOBBIN: Perimeter skin mesh (1mm wall, hollow interior)
+  # BOBBIN: Loaded from gmsh. 33mm square with 3mm fillet radius on corners
   [bobbin]
-    type = GeneratedMeshGenerator
-    dim = 2
-    xmin = -16.5 	# mm
-    xmax = 16.5 	# mm
-    ymin = -16.5 	# mm
-    ymax = 16.5 	# mm
-    nx = 33 # 33 elements across 33mm = 1mm element size
-    ny = 33 # 33 elements across 33mm = 1mm element size
-    elem_type = QUAD4
-    boundary_name_prefix = bobbin
+    type = FileMeshGenerator
+    file = "bobbin_fillet.msh"
   []
+
   [bobbin_id]
     type = RenameBlockGenerator
     input = bobbin
     old_block = '0'
     new_block = '1'
   []
-
-  # Tag all interior elements for deletion
-  [flag_interior]
-    type = ParsedSubdomainMeshGenerator
-    input = bobbin_id
-    combinatorial_geometry = '(x > -15.5) & (x < 15.5) & (y > -15.5) & (y < 15.5)'
-    block_id = '99'
-    block_name = 'bobbin_interior'
-  []
-
-  # Delete the interior block
-  [bobbin_perimeter]
-    type = BlockDeletionGenerator
-    input = flag_interior
-    block = 'bobbin_interior'
-    new_boundary = 'bobbin_inner_surface'
-  []
   
-  # WIRE: Thin 2D
+  # WIRE: Thin 2D mesh, starts where top flat face ends (x = 13.5)
   [wire]
     type = GeneratedMeshGenerator
     dim = 2
-    xmin = 16.5      	# Starts at bobbin vertex
-    xmax = 66.5    		# Extends to feed point (50mm length)
+    xmin = 13.5      	# Starts at bobbin vertex
+    xmax = 63.5    		# Extends to feed point (50mm length)
     ymin = 16.25 	# Centered at bobbin vertex height
     ymax = 16.75
     nx = 50		 		# 1mm element size along wire
@@ -69,7 +45,7 @@
   # Combine bobbin and wire meshes into single mesh for contact and constraints
   [combined]
     type = CombinerGenerator
-    inputs = 'bobbin_perimeter wire_id' 
+    inputs = 'bobbin_id wire_id' 
   []
 
   # Wire bottom face - contact secondary surface
@@ -81,13 +57,13 @@
     normal = '0 -1 0'  # Normal facing downwards
   []
   
-  # Create nodeset for tied connection point (bobbin top-right vertex)
+  # Bobbin tie point - top flat face at (13.5, 16.5)
   [tie_point_bobbin]
     type = ExtraNodesetGenerator
     input = wire_bottom_boundary
     new_boundary = 'tie_point_bobbin'
-    coord = '16.5 16.5 0'
-    tolerance = 0.1
+    coord = '13.5 16.5 0'
+    tolerance = 0.5
   []
   
   # Wire attachment nodes (left edge of wire at bobbin vertex)
@@ -95,18 +71,17 @@
     type = BoundingBoxNodeSetGenerator
     input = tie_point_bobbin
     new_boundary = 'tie_point_wire'
-    bottom_left = '16.4 16.2 0'
-    top_right = '16.6 16.8 0'
+    bottom_left = '13.4 16.2 0'
+    top_right = '13.6 16.8 0'
   []
   
   # Wire feed point boundary (right edge of wire)
   [feed_point]
     type = BoundingBoxNodeSetGenerator
-    
-input = tie_point_wire
+    input = tie_point_wire
     new_boundary = 'feed_point'
-    bottom_left = '66.4 16.2 0'
-    top_right = '66.6 16.8 0'
+    bottom_left = '63.4 16.2 0'
+    top_right = '63.6 16.8 0'
   []
 []
 
@@ -305,7 +280,7 @@ input = tie_point_wire
 [Contact]
   # Frictionless contact between wire and bobbin surfaces
   [wire_bobbin]
-    primary = 'bobbin_inner_surface'
+    primary = 'bobbin_outer'
     secondary = 'wire_bottom'
     model = frictionless
     formulation = penalty
@@ -319,13 +294,13 @@ input = tie_point_wire
   [bobbin_rotate_x]
     type = FunctionDirichletBC
     variable = disp_x
-    boundary = 'bobbin_inner_surface tie_point_wire'
+    boundary = 'bobbin_inner tie_point_wire'
     function = rotate_x
   []
   [bobbin_rotate_y]
     type = FunctionDirichletBC
     variable = disp_y
-    boundary = 'bobbin_inner_surface tie_point_wire'
+    boundary = 'bobbin_inner tie_point_wire'
     function = rotate_y
   []
 
@@ -438,7 +413,7 @@ input = tie_point_wire
   [feed_axial_force]
     type = PointValue
     variable = stress_xx
-    point = '66.5 16.5 0'
+    point = '63.5 16.5 0'
   []
   
   # Approximate tension magnitude (stress * cross-section area)
