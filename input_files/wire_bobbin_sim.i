@@ -11,13 +11,6 @@
     type = FileMeshGenerator
     file = "bobbin_fillet.msh"
   []
-
-  [bobbin_id]
-    type = RenameBlockGenerator
-    input = bobbin
-    old_block = '0'
-    new_block = '1'
-  []
   
   # WIRE: Thin 2D mesh, starts where top flat face ends (x = 13.5)
   [wire]
@@ -45,7 +38,7 @@
   # Combine bobbin and wire meshes into single mesh for contact and constraints
   [combined]
     type = CombinerGenerator
-    inputs = 'bobbin_id wire_id' 
+    inputs = 'bobbin wire_id' 
   []
 
   # Wire bottom face - contact secondary surface
