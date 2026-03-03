@@ -101,11 +101,12 @@
   
   # Wire feed point boundary (right edge of wire)
   [feed_point]
-	  type = BoundingBoxNodeSetGenerator
-	  input = tie_point_wire
-	  new_boundary = 'feed_point'
-	  bottom_left = '66.4 16.2 0'
-	  top_right = '66.6 16.8 0'
+    type = BoundingBoxNodeSetGenerator
+    
+input = tie_point_wire
+    new_boundary = 'feed_point'
+    bottom_left = '66.4 16.2 0'
+    top_right = '66.6 16.8 0'
   []
 []
 
@@ -308,7 +309,7 @@
     secondary = 'wire_bottom'
     model = frictionless
     formulation = penalty
-    penalty = 1e6
+    penalty = 1e4
     normalize_penalty = true
   []
 []
@@ -356,7 +357,7 @@
   
   # Time stepping - 1 second = 1 full rotation
   dt = 0.00005
-  end_time = 0.01
+  end_time = 0.2
   dtmin = 1e-8
   
   # Relaxed tolerances for contact
@@ -374,9 +375,9 @@
   [TimeStepper]
     type = IterationAdaptiveDT
     dt = 0.00005
-    cutback_factor = 0.25
-    growth_factor = 1.1
-    optimal_iterations = 15
+    cutback_factor = 0.1
+    growth_factor = 1.05
+    optimal_iterations = 10
   []
   
   # Automatic scaling helps with stiff bobbin
@@ -387,7 +388,7 @@
 [Outputs]
   [exodus]
     type = Exodus
-    interval = 5
+    interval = 1
   []
   [csv]
     type = CSV
