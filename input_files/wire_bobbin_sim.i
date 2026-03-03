@@ -25,8 +25,8 @@
     dim = 2
     xmin = 13.5      	# Starts at bobbin vertex
     xmax = 63.5    		# Extends to feed point (50mm length)
-    ymin = 16.25 	# Centered at bobbin vertex height
-    ymax = 16.75
+    ymin = 16.5 	# Centered at bobbin vertex height
+    ymax = 17.0
     nx = 50		 		# 1mm element size along wire
     ny = 1
     elem_type = QUAD4
@@ -71,8 +71,8 @@
     type = BoundingBoxNodeSetGenerator
     input = tie_point_bobbin
     new_boundary = 'tie_point_wire'
-    bottom_left = '13.4 16.2 0'
-    top_right = '13.6 16.8 0'
+    bottom_left = '13.4 16.4 0'
+    top_right = '13.6 17.1 0'
   []
   
   # Wire feed point boundary (right edge of wire)
@@ -80,8 +80,8 @@
 	  type = BoundingBoxNodeSetGenerator
 	  input = tie_point_wire
 	  new_boundary = 'feed_point'
-	  bottom_left = '63.4 16.2 0'
-	  top_right = '63.6 16.8 0'
+	  bottom_left = '63.4 16.4 0'
+	  top_right = '63.6 17.1 0'
   []
 []
 
