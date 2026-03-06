@@ -85,12 +85,6 @@
   []
 []
 
-[Variables]
-  [disp_x]
-  []
-  [disp_y]
-  []
-[]
 
 [AuxVariables]
   # Stresses 
@@ -213,50 +207,34 @@
   []
 []
 
-[Kernels]
-  # Bobbin mechanics
-  [bobbin_stress_x]
-    type = StressDivergenceTensors
-    variable = disp_x
-    component = 0
-    block = '1'
-  []
-  [bobbin_stress_y]
-    type = StressDivergenceTensors
-    variable = disp_y
-    component = 1
-    block = '1'
-  []
-  
-  # Wire mechanics
-  [wire_stress_x]
-    type = StressDivergenceTensors
-    variable = disp_x
-    component = 0
-    block = '2'
-  []
-  [wire_stress_y]
-    type = StressDivergenceTensors
-    variable = disp_y
-    component = 1
-    block = '2'
+[Physics]
+  [SolidMechanics]
+    [QuasiStatic]
+      [bobbin]
+        strain = FINITE
+        block = '1'
+        add_variables = true
+        new_system = true
+        formulation = TOTAL
+      []
+      [wire]
+        strain = FINITE
+        block = '2'
+        add_variables = true
+        new_system = true
+        formulation = TOTAL
+      []
+    []
   []
 []
 
+
 [Materials]
-  # Bobbin material (very stiff = quasi-rigid)
+  # Bobbin material (modelling with moderate stiffness to help convergence))
   [bobbin_elasticity]
     type = ComputeIsotropicElasticityTensor
-    youngs_modulus = 200e12    # Modelling as rigid body
+    youngs_modulus = 200e9
     poissons_ratio = 0.3
-    block = '1'
-  []
-  [bobbin_strain]
-    type = ComputeFiniteStrain
-    block = '1'
-  []
-  [bobbin_stress]
-    type = ComputeFiniteStrainElasticStress
     block = '1'
   []
   
@@ -265,14 +243,6 @@
     type = ComputeIsotropicElasticityTensor
     youngs_modulus = 200e9
     poissons_ratio = 0.3
-    block = '2'
-  []
-  [wire_strain]
-    type = ComputeFiniteStrain
-    block ='2'
-  []
-  [wire_stress]
-    type = ComputeFiniteStrainElasticStress
     block = '2'
   []
 []
@@ -292,17 +262,26 @@
 [BCs]
   # Prescribe rigid body rotation to all bobbin nodes and wire start nodes to avoid using constraints
   [bobbin_rotate_x]
-    type = FunctionDirichletBC
+    type = DisplacementAboutAxis
     variable = disp_x
     boundary = 'bobbin_inner tie_point_wire'
-    function = rotate_x
+    component = 0
+    function = theta
+    angle_units = radians
+    axis_origin = '0 0 0'
+    axis_direction = '0 0 1'
   []
   [bobbin_rotate_y]
-    type = FunctionDirichletBC
+    type = DisplacementAboutAxis
     variable = disp_y
     boundary = 'bobbin_inner tie_point_wire'
-    function = rotate_y
+    component = 1
+    function = theta
+    angle_units = radians
+    axis_origin = '0 0 0'
+    axis_direction = '0 0 1'
   []
+[]
 
   # Wire feed point - fixed in space (infinite wire supply)
   [feed_fixed_x]
@@ -331,7 +310,7 @@
   solve_type = NEWTON
   
   # Time stepping - 1 second = 1 full rotation
-  dt = 0.00005
+  dt = 0.001
   end_time = 0.01
   dtmin = 1e-8
   
@@ -345,12 +324,11 @@
 
   petsc_options_iname = '-pc_type -pc_factor_shift_type -snes_linesearch_type'
   petsc_options_value  = 'lu       NONZERO               bt'
-  nl_forced_its = 1        # Force at least one iteration before cutback
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 0.00005
-    cutback_factor = 0.25
+    dt = 0.001
+    cutback_factor = 0.5
     growth_factor = 1.1
     optimal_iterations = 15
   []
