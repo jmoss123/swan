@@ -277,7 +277,9 @@
     secondary = 'wire_bottom'
     model = frictionless
     formulation = penalty
-    penalty = 1e4
+    search_tolerance = 1.0
+    search_radius = 2.0
+    penalty = 1e6
     normalize_penalty = true
   []
 []
@@ -324,7 +326,7 @@
   solve_type = NEWTON
   
   # Time stepping - 1 second = 1 full rotation
-  dt = 0.00005
+  dt = 0.0001
   end_time = 0.2
   dtmin = 1e-8
   
@@ -342,7 +344,7 @@
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 0.00005
+    dt = 0.0001
     cutback_factor = 0.1
     growth_factor = 1.05
     optimal_iterations = 10
