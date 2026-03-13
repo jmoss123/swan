@@ -207,15 +207,11 @@
         strain = FINITE
         block = '1'
         add_variables = true
-        new_system = true
-        formulation = TOTAL
       []
       [wire]
         strain = FINITE
         block = '2'
         add_variables = true
-        new_system = true
-        formulation = TOTAL
       []
     []
   []
@@ -230,12 +226,20 @@
     poissons_ratio = 0.3
     block = '1'
   []
+  [bobbin_stress]
+    type = ComputeFiniteStrainElasticStress
+    block = '1'
+  []
   
   # Wire material (1D copper beam)
   [wire_elasticity]
     type = ComputeIsotropicElasticityTensor
     youngs_modulus = 200e9
     poissons_ratio = 0.3
+    block = '2'
+  []
+  [wire_stress]
+    type = ComputeFiniteStrainElasticStress
     block = '2'
   []
 []
@@ -276,7 +280,6 @@
     axis_origin = '0 0 0'
     axis_direction = '0 0 1'
   []
-[]
 
   # Wire feed point - fixed in space (infinite wire supply)
   [feed_fixed_x]
@@ -312,7 +315,7 @@
   # Relaxed tolerances for contact
   nl_rel_tol = 1e-5
   nl_abs_tol = 1e-4
-  nl_max_its = 50
+  nl_max_its = 100
   
   l_max_its = 200
   l_tol = 1e-4
@@ -322,10 +325,11 @@
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 0.001
-    cutback_factor = 0.5
-    growth_factor = 1.1
-    optimal_iterations = 15
+    dt = 0.005
+    cutback_factor = 0.8
+    growth_factor = 1.5
+    optimal_iterations = 50
+    iteration_window = 10
   []
   
   # Automatic scaling helps with stiff bobbin
