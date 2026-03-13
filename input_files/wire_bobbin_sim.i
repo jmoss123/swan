@@ -15,7 +15,7 @@
   [bobbin_id]
     type = RenameBlockGenerator
     input = bobbin
-    old_block = '0'
+    old_block = 'bobbin_skin'
     new_block = '1'
   []
   
@@ -214,15 +214,11 @@
         strain = FINITE
         block = '1'
         add_variables = true
-        new_system = true
-        formulation = TOTAL
       []
       [wire]
         strain = FINITE
         block = '2'
         add_variables = true
-        new_system = true
-        formulation = TOTAL
       []
     []
   []
@@ -237,6 +233,10 @@
     poissons_ratio = 0.3
     block = '1'
   []
+  [bobbin_stress]
+    type = ComputeFiniteStrainElasticStress
+    block = '1'
+  []
   
   # Wire material (1D copper beam)
   [wire_elasticity]
@@ -245,19 +245,23 @@
     poissons_ratio = 0.3
     block = '2'
   []
-[]
-
-[Contact]
-  # Frictionless contact between wire and bobbin surfaces
-  [wire_bobbin]
-    primary = 'bobbin_outer'
-    secondary = 'wire_bottom'
-    model = frictionless
-    formulation = penalty
-    penalty = 1e6
-    normalize_penalty = true
+  [wire_stress]
+    type = ComputeFiniteStrainElasticStress
+    block = '2'
   []
 []
+
+#[Contact]
+  # Frictionless contact between wire and bobbin surfaces
+#  [wire_bobbin]
+#    primary = 'bobbin_outer'
+#    secondary = 'wire_bottom'
+#    model = frictionless
+#    formulation = penalty
+#    penalty = 1e6
+#    normalize_penalty = true
+#  []
+#[]
 
 [BCs]
   # Prescribe rigid body rotation to all bobbin nodes and wire start nodes to avoid using constraints
@@ -281,7 +285,6 @@
     axis_origin = '0 0 0'
     axis_direction = '0 0 1'
   []
-[]
 
   # Wire feed point - fixed in space (infinite wire supply)
   [feed_fixed_x]
@@ -311,13 +314,13 @@
   
   # Time stepping - 1 second = 1 full rotation
   dt = 0.001
-  end_time = 0.01
+  end_time = 0.2
   dtmin = 1e-8
   
   # Relaxed tolerances for contact
   nl_rel_tol = 1e-5
   nl_abs_tol = 1e-4
-  nl_max_its = 50
+  nl_max_its = 100
   
   l_max_its = 200
   l_tol = 1e-4
@@ -327,10 +330,11 @@
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 0.001
-    cutback_factor = 0.5
-    growth_factor = 1.1
-    optimal_iterations = 15
+    dt = 0.005
+    cutback_factor = 0.8
+    growth_factor = 1.5
+    optimal_iterations = 50
+    iteration_window = 10
   []
   
   # Automatic scaling helps with stiff bobbin
