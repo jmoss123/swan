@@ -17,11 +17,11 @@
     type = GeneratedMeshGenerator
     dim = 2
     xmin = 13.5      	# Starts at bobbin vertex
-    xmax = 63.5    		# Extends to feed point (50mm length)
+    xmax = 200    	# Extends to feed point (50mm length) + additional length to allow bobbin wrap
     ymin = 16.5 	# Centered at bobbin vertex height
     ymax = 17.0
-    nx = 50		 		# 1mm element size along wire
-    ny = 1
+    nx = 185		 		# 1mm element size along wire
+    ny = 2
     elem_type = QUAD4
     boundary_name_prefix = wire
     boundary_id_offset = 10 	# Avoid ID conflicts with bobbin boundaries
@@ -73,8 +73,8 @@
     type = BoundingBoxNodeSetGenerator
     input = tie_point_wire
     new_boundary = 'feed_point'
-    bottom_left = '63.4 16.4 0'
-    top_right = '63.6 17.1 0'
+    bottom_left = '60.0 16.0 0'
+    top_right = '70.0 17.5 0'
   []
 []
 
@@ -281,18 +281,19 @@
     axis_direction = '0 0 1'
   []
 
-  # Wire feed point - fixed in space (infinite wire supply)
-  [feed_fixed_x]
-    type = DirichletBC
-    variable = disp_x
-    boundary = feed_point
-    value = 0
-  []
+  # Wire feed point - fixed in y, free to feed in x
   [feed_fixed_y]
     type = DirichletBC
     variable = disp_y
     boundary = feed_point
     value = 0
+  []
+  [feed_slip_x]
+    type = NodeFaceConstraint
+    variable = disp_x
+    primary_boundary = feed_point
+    secondary_boundary = feed_point
+    model = frictionless
   []
 []
 
@@ -309,7 +310,7 @@
   
   # Time stepping - 1 second = 1 full rotation
   dt = 0.001
-  end_time = 0.2
+  end_time = 0.5
   dtmin = 1e-8
   
   # Relaxed tolerances for contact
@@ -325,7 +326,7 @@
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 0.005
+    dt = 0.001
     cutback_factor = 0.8
     growth_factor = 1.5
     optimal_iterations = 50
@@ -340,7 +341,7 @@
 [Outputs]
   [exodus]
     type = Exodus
-    interval = 1
+    interval = 5
   []
   [csv]
     type = CSV
