@@ -135,22 +135,20 @@
     normal = '0 1 0'
   []
 
-  # Pull point at LEFT end of wire
-  [pull_point]
-    type = BoundingBoxNodeSetGenerator
-    input = feed_point_temp
-    new_boundary = 'pull_point'
-    bottom_left = '13.4 16.4 0'
-    top_right   = '13.6 17.1 0'
-  []
-
-  # Feed point at RIGHT end of wire (wire feeds in from right)
   [feed_point]
     type = BoundingBoxNodeSetGenerator
-    input = lower_jaw_top_boundary
+    input = lower_jaw_top_boundary    
     new_boundary = 'feed_point'
     bottom_left = '199.9 16.4 0'
     top_right   = '200.1 17.1 0'
+  []
+
+  [pull_point]
+    type = BoundingBoxNodeSetGenerator
+    input = feed_point                
+    new_boundary = 'pull_point'
+    bottom_left = '13.4 16.4 0'
+    top_right   = '13.6 17.1 0'
   []
 []
 
@@ -499,10 +497,52 @@
     function = phase_indicator
   []
 
-  [pull_force]
+  [wire_tension_N]
     type = ParsedPostprocessor
     expression = 'nozzle_axial_stress * 0.5'
     pp_names = 'nozzle_axial_stress'
+  []
+
+  # --- FRICTION FORCE ---
+  [friction_force_upper]
+    type = SideIntegralVariablePostprocessor
+    variable = stress_xy
+    boundary = wire_top
+  []
+  [friction_force_lower]
+    type = SideIntegralVariablePostprocessor
+    variable = stress_xy
+    boundary = wire_bottom
+  []
+  [total_friction_force_N]
+    type = ParsedPostprocessor
+    expression = 'abs(friction_force_upper) + abs(friction_force_lower)'
+    pp_names = 'friction_force_upper friction_force_lower'
+  []
+
+  # --- NORMAL FORCE ---
+  [normal_force_upper]
+    type = SideIntegralVariablePostprocessor
+    variable = stress_yy
+    boundary = wire_top
+  []
+  [normal_force_lower]
+    type = SideIntegralVariablePostprocessor
+    variable = stress_yy
+    boundary = wire_bottom
+  []
+  [total_normal_force_N]
+    type = ParsedPostprocessor
+    expression = 'abs(normal_force_upper) + abs(normal_force_lower)'
+    pp_names = 'normal_force_upper normal_force_lower'
+  []
+
+  # --- EFFECTIVE FRICTION COEFFICIENT ---
+  [effective_friction_coefficient]
+    type = ParsedPostprocessor
+    expression = 'if(total_normal_force_N > 1e-6,
+                    total_friction_force_N / total_normal_force_N, 0)'
+    pp_names = 'total_friction_force_N total_normal_force_N'
   []
 
   [nonlinear_its]
