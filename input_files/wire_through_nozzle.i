@@ -240,11 +240,11 @@
   # PHASE 1 (t=0..1): Jaws squeeze to 0.15mm. Holds after t=1.
   [squeeze_ramp_upper]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, -0.15 * t, -0.15)'
+    expression = 'if(t <= 1.0, -0.10 * t, -0.10)'
   []
   [squeeze_ramp_lower]
     type = ParsedFunction
-    expression = 'if(t <= 1.0,  0.15 * t,  0.15)'
+    expression = 'if(t <= 1.0,  0.10 * t,  0.10)'
   []
 
   # PHASE 2 (t=1..2): Wire pulled 5mm. Zero during squeeze phase.
@@ -308,7 +308,7 @@
     model     = coulomb
     friction_coefficient = 0.15
     formulation = penalty
-    penalty     = 1e7
+    penalty     = 1e6
     normalize_penalty = true
     search_tolerance = 1.0
     search_radius    = 2.0
@@ -320,7 +320,7 @@
     model     = coulomb
     friction_coefficient = 0.15
     formulation = penalty
-    penalty     = 1e7
+    penalty     = 1e6
     normalize_penalty = true
     search_tolerance = 1.0
     search_radius    = 2.0
@@ -398,14 +398,15 @@
 
 [Executioner]
   type = Transient
-  solve_type = NEWTON
+  solve_type = PJFNK
 
-  petsc_options_iname = '-pc_type -pc_factor_shift_type -snes_linesearch_type'
-  petsc_options_value  = 'lu NONZERO bt'
+  petsc_options_iname = '-pc_type -pc_hypre_type -ksp_type -snes_linesearch_type'
+  petsc_options_value  = 'hypre    boomeramg      gmres     l2'
 
   dt       = 0.05
   end_time = 2.0
   dtmin    = 1e-8
+  dtmax    = 0.05
 
   nl_rel_tol = 1e-5
   nl_abs_tol = 1e-4
@@ -416,9 +417,9 @@
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 0.05
-    cutback_factor = 0.8
-    growth_factor = 1.5
+    dt = 0.02
+    cutback_factor = 0.5
+    growth_factor = 1.2
     optimal_iterations = 30
     iteration_window = 10
   []
