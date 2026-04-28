@@ -158,14 +158,12 @@
     top_right   = '13.6 17.1 0'
   []
 
-  # Wire feed guide
-  # Sits between nozzle (x=90..110) and bobbin (x=0): wire path is right->nozzle->feed->bobbin
-  [feed_point]
-    type = BoundingBoxNodeSetGenerator
-    input = tie_point_wire
-    new_boundary = 'feed_point'
-    bottom_left = '60.0 16.0 0'
-    top_right   = '70.0 17.5 0'
+  [spool_end]
+  type = BoundingBoxNodeSetGenerator
+  input = tie_point_wire
+  new_boundary = 'spool_end'
+  bottom_left = '199.9 16.4 0'
+  top_right   = '200.1 17.1 0'   # Right end of wire — the spool
   []
 []
 
@@ -486,13 +484,11 @@
     function = squeeze_ramp_lower
   []
 
-  # Wire feed guide: fixed in y, free in x
-  # Bobbin rotation in Phase 2 provides the x-direction pull
-  [feed_fixed_y]
-    type = DirichletBC
-    variable = disp_y
-    boundary = feed_point
-    value = 0
+  [spool_fixed_y]
+  type = DirichletBC
+  variable = disp_y
+  boundary = spool_end
+  value = 0
   []
 []
 
@@ -598,19 +594,6 @@
     type = NodalExtremeValue
     variable = disp_y
     boundary = tie_point_wire
-  []
-
-  # Wire tension at feed guide
-  # Area = 0.5mm thickness x 1mm unit depth = 0.5 mm^2
-  [feed_axial_force]
-    type = PointValue
-    variable = stress_xx
-    point = '63.5 16.5 0'
-  []
-  [tension_magnitude]
-    type = ParsedPostprocessor
-    expression = 'feed_axial_force * 0.5'
-    pp_names = 'feed_axial_force'
   []
 
   # Nozzle contact force
