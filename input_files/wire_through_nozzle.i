@@ -135,20 +135,20 @@
     normal = '0 1 0'
   []
 
-  # Feed point at left wire end
-  [feed_point]
+  # Pull point at LEFT end of wire
+  [pull_point]
     type = BoundingBoxNodeSetGenerator
-    input = lower_jaw_top_boundary
-    new_boundary = 'feed_point'
+    input = feed_point_temp
+    new_boundary = 'pull_point'
     bottom_left = '13.4 16.4 0'
     top_right   = '13.6 17.1 0'
   []
 
-  # Pull point at right wire end
-  [pull_point]
+  # Feed point at RIGHT end of wire (wire feeds in from right)
+  [feed_point]
     type = BoundingBoxNodeSetGenerator
-    input = feed_point
-    new_boundary = 'pull_point'
+    input = lower_jaw_top_boundary
+    new_boundary = 'feed_point'
     bottom_left = '199.9 16.4 0'
     top_right   = '200.1 17.1 0'
   []
@@ -250,7 +250,7 @@
   # PHASE 2 (t=1..2): Wire pulled 5mm. Zero during squeeze phase.
   [pull_ramp]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, 0.0, 5.0 * (t - 1.0))'
+    expression = 'if(t <= 1.0, 0.0, -5.0 * (t - 1.0))'  
   []
 
   # Returns 1 during squeeze phase, 2 during pull phase — for CSV filtering
@@ -469,6 +469,7 @@
     type = NodalExtremeValue
     variable = disp_x
     boundary = pull_point
+    value_type = min
   []
 
   [nozzle_axial_stress]
