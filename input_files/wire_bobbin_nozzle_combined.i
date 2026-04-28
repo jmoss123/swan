@@ -264,13 +264,13 @@
   # Angular velocity — zero during squeeze, 1 rev/s during winding
   [omega]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, 0.0, 6.28318)'
+    expression = 'if(t <= 1.0, 0.0, 3.14159)'
   []
 
   # Cumulative rotation angle — zero during Phase 1, ramps 0->2*pi in Phase 2
   [theta]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, 0.0, 6.28318 * (t - 1.0))'
+    expression = 'if(t <= 1.0, 0.0, 3.14159 * (t - 1.0))'
   []
 
   # Rotation displacement components — wire_bobbin_sim.i (unchanged)
@@ -323,7 +323,7 @@
         add_variables = true
       []
       [nozzle]                  
-        strain = FINITE
+        strain = SMALL
         block = '3 4'
         add_variables = true
       []
@@ -368,7 +368,7 @@
     block = '3 4'
   []
   [nozzle_stress]
-    type = ComputeFiniteStrainElasticStress
+    type = ComputeLinearElasticStress
     block = '3 4'
   []
 []
@@ -515,10 +515,10 @@
   petsc_options_iname = '-pc_type -pc_hypre_type -ksp_type -snes_linesearch_type'
   petsc_options_value  = 'hypre    boomeramg      gmres     l2'
 
-  dt       = 0.05
-  end_time = 2.0
+  dt       = 0.01
+  end_time = 3.0
   dtmin    = 1e-8
-  dtmax    = 0.05
+  dtmax    = 0.02
 
   nl_rel_tol = 1e-5
   nl_abs_tol = 1e-4
@@ -529,11 +529,11 @@
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 0.02
+    dt = 0.01
     cutback_factor = 0.5
     growth_factor  = 1.2
     optimal_iterations  = 30
-    iteration_window    = 10
+    iteration_window    = 5
   []
 
   automatic_scaling    = true
