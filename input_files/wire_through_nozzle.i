@@ -240,11 +240,11 @@
   # PHASE 1 (t=0..1): Jaws squeeze to 0.15mm. Holds after t=1.
   [squeeze_ramp_upper]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, -0.10 * t, -0.10)'
+    expression = 'if(t <= 1.0, -0.11 * t, -0.11)'
   []
   [squeeze_ramp_lower]
     type = ParsedFunction
-    expression = 'if(t <= 1.0,  0.10 * t,  0.10)'
+    expression = 'if(t <= 1.0,  0.11 * t,  0.11)'
   []
 
   # PHASE 2 (t=1..2): Wire pulled 5mm. Zero during squeeze phase.
