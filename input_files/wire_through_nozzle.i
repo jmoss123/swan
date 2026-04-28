@@ -237,9 +237,26 @@
 []
 
 [Functions]
+  # PHASE 1 (t=0..1): Jaws squeeze to 0.15mm. Holds after t=1.
+  [squeeze_ramp_upper]
+    type = ParsedFunction
+    expression = 'if(t <= 1.0, -0.15 * t, -0.15)'
+  []
+  [squeeze_ramp_lower]
+    type = ParsedFunction
+    expression = 'if(t <= 1.0,  0.15 * t,  0.15)'
+  []
+
+  # PHASE 2 (t=1..2): Wire pulled 5mm. Zero during squeeze phase.
   [pull_ramp]
     type = ParsedFunction
-    expression = '5.0 * t'
+    expression = 'if(t <= 1.0, 0.0, 5.0 * (t - 1.0))'
+  []
+
+  # Returns 1 during squeeze phase, 2 during pull phase — for CSV filtering
+  [phase_indicator]
+    type = ParsedFunction
+    expression = 'if(t <= 1.0, 1, 2)'
   []
 []
 
@@ -311,29 +328,44 @@
 []
 
 [BCs]
-  [fix_upper_jaw_x]
+  # --- Upper jaw: sides fixed, outer top face driven downward ---
+  [fix_upper_jaw_sides_x]
     type     = DirichletBC
     variable = disp_x
-    boundary = 'upper_jaw_left upper_jaw_right upper_jaw_top upper_jaw_bottom'
+    boundary = 'upper_jaw_left upper_jaw_right upper_jaw_top'
     value    = 0
   []
-  [fix_upper_jaw_y]
+  [fix_upper_jaw_sides_y]
     type     = DirichletBC
     variable = disp_y
-    boundary = 'upper_jaw_left upper_jaw_right upper_jaw_top upper_jaw_bottom'
+    boundary = 'upper_jaw_left upper_jaw_right'
     value    = 0
   []
-  [fix_lower_jaw_x]
+  [squeeze_upper_jaw]
+    type     = FunctionDirichletBC
+    variable = disp_y
+    boundary = upper_jaw_top
+    function = squeeze_ramp_upper
+  []
+
+  # --- Lower jaw: sides fixed, outer bottom face driven upward ---
+  [fix_lower_jaw_sides_x]
     type     = DirichletBC
     variable = disp_x
-    boundary = 'lower_jaw_left lower_jaw_right lower_jaw_top lower_jaw_bottom'
+    boundary = 'lower_jaw_left lower_jaw_right lower_jaw_bottom'
     value    = 0
   []
-  [fix_lower_jaw_y]
+  [fix_lower_jaw_sides_y]
     type     = DirichletBC
     variable = disp_y
-    boundary = 'lower_jaw_left lower_jaw_right lower_jaw_top lower_jaw_bottom'
+    boundary = 'lower_jaw_left lower_jaw_right'
     value    = 0
+  []
+  [squeeze_lower_jaw]
+    type     = FunctionDirichletBC
+    variable = disp_y
+    boundary = lower_jaw_bottom
+    function = squeeze_ramp_lower
   []
 
   [feed_fixed_y]
@@ -371,8 +403,8 @@
   petsc_options_iname = '-pc_type -pc_factor_shift_type -snes_linesearch_type'
   petsc_options_value  = 'lu NONZERO bt'
 
-  dt       = 0.1
-  end_time = 1.0
+  dt       = 0.05
+  end_time = 2.0
   dtmin    = 1e-8
 
   nl_rel_tol = 1e-5
@@ -384,10 +416,10 @@
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 0.1
+    dt = 0.05
     cutback_factor = 0.8
     growth_factor = 1.5
-    optimal_iterations = 50
+    optimal_iterations = 30
     iteration_window = 10
   []
 
@@ -398,11 +430,11 @@
 [Outputs]
   [exodus]
     type = Exodus
-    interval = 5
+    interval = 10
   []
   [csv]
     type = CSV
-    interval = 5
+    interval = 10
   []
   print_linear_residuals = true
 
@@ -419,39 +451,68 @@
     variable = stress_xx
     block = '2'
   []
+
   [wire_avg_strain]
     type = ElementAverageValue
     variable = strain_xx
     block = '2'
   []
+
   [wire_max_vonmises]
     type = ElementExtremeValue
     variable = vonmises
     block = '2'
   []
+
   [pull_disp_x]
     type = NodalExtremeValue
     variable = disp_x
     boundary = pull_point
   []
+
   [nozzle_axial_stress]
     type = PointValue
     variable = stress_xx
     point = '100.0 16.75 0'
   []
+
+  # Compressive stress in wire at nozzle mid-point (y-direction)
+  [nozzle_stress_yy]
+    type = PointValue
+    variable = stress_yy
+    point = '100.0 16.75 0'
+  []
+
+  # Approximate contact force: compressive stress * nozzle contact area
+  # Contact area = nozzle width (20mm) * unit depth (1mm) = 20 mm^2
+  [contact_force]
+    type = ParsedPostprocessor
+    expression = 'abs(nozzle_stress_yy) * 20.0'
+    pp_names = 'nozzle_stress_yy'
+  []
+
+  # Phase indicator: useful for filtering CSV output by phase
+  [simulation_phase]
+    type = FunctionValuePostprocessor
+    function = phase_indicator
+  []
+
   [pull_force]
     type = ParsedPostprocessor
     expression = 'nozzle_axial_stress * 0.5'
     pp_names = 'nozzle_axial_stress'
   []
+
   [nonlinear_its]
     type = NumNonlinearIterations
   []
+
   [linear_its]
     type = NumLinearIterations
   []
+
 []
 
 [Debug]
-  show_var_residual_norms = true
+  show_var_residual_norms = false
 []
