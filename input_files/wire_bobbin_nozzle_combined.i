@@ -110,6 +110,7 @@
   input = spool_end
   normals = '0 1 0'
   new_boundary = 'bobbin_top'
+  block = '1'
   fixed_normal = true
   variance = 30.0        
   []
@@ -119,6 +120,7 @@
     input = bobbin_top
     normals = '1 0 0'
     new_boundary = 'bobbin_right'
+    block = '1'
     fixed_normal = true
     variance = 30.0
   []
@@ -128,6 +130,7 @@
     input = bobbin_right
     normals = '0 -1 0'
     new_boundary = 'bobbin_bottom_face'
+    block = '1'
     fixed_normal = true
     variance = 30.0
   []
@@ -137,6 +140,7 @@
     input = bobbin_bottom_face
     normals = '-1 0 0'
     new_boundary = 'bobbin_left'
+    block = '1'
     fixed_normal = true
     variance = 30.0
   []
@@ -421,9 +425,10 @@
     model     = coulomb
     friction_coefficient = 0.1
     formulation = penalty
+    penalty          = 1e7
+    normalize_penalty = true
     search_tolerance = 5.0
     search_radius    = 20.0
-    penalty          = 1e7
   []
   [wire_bobbin_right]
     primary   = 'bobbin_right'
