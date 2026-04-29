@@ -381,11 +381,12 @@
   [wire_bobbin]
     primary   = 'bobbin_outer'
     secondary = 'wire_bottom'
-    model     = frictionless
+    model     = coulomb
+    friction_coefficient = 0.1
     formulation = penalty
-    search_tolerance = 1.0
-    search_radius    = 2.0
-    penalty          = 1e6
+    search_tolerance = 5.0
+    search_radius    = 20.0
+    penalty          = 1e7
     normalize_penalty = true
   []
 
