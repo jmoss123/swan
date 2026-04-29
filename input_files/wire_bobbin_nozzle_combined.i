@@ -104,6 +104,43 @@
     inputs = 'bobbin wire_id upper_jaw_id lower_jaw_id'
   []
 
+  # Define bobbin boundaries by normal direction for contact formulation
+  [bobbin_top]
+  type = SideSetsFromNormalsGenerator
+  input = combined
+  normals = '0 1 0'
+  new_boundary = 'bobbin_top'
+  fixed_normal = true
+  variance = 30.0        
+  []
+
+  [bobbin_right]
+    type = SideSetsFromNormalsGenerator
+    input = bobbin_top
+    normals = '1 0 0'
+    new_boundary = 'bobbin_right'
+    fixed_normal = true
+    variance = 30.0
+  []
+
+  [bobbin_bottom_face]
+    type = SideSetsFromNormalsGenerator
+    input = bobbin_right
+    normals = '0 -1 0'
+    new_boundary = 'bobbin_bottom_face'
+    fixed_normal = true
+    variance = 30.0
+  []
+
+  [bobbin_left]
+    type = SideSetsFromNormalsGenerator
+    input = bobbin_bottom_face
+    normals = '-1 0 0'
+    new_boundary = 'bobbin_left'
+    fixed_normal = true
+    variance = 30.0
+  []
+
   # Wire top face (upper jaw contact secondary)
   [wire_top_boundary]
     type = SideSetsAroundSubdomainGenerator
@@ -163,7 +200,7 @@
   input = tie_point_wire
   new_boundary = 'spool_end'
   bottom_left = '199.9 16.4 0'
-  top_right   = '200.1 17.1 0'   # Right end of wire — the spool
+  top_right   = '200.1 17.1 0' 
   []
 []
 
@@ -378,8 +415,8 @@
 # ============================================================
 [Contact]
   # Wire bottom vs bobbin outer face
-  [wire_bobbin]
-    primary   = 'bobbin_outer'
+  [wire_bobbin_top]
+    primary   = 'bobbin_top'
     secondary = 'wire_bottom'
     model     = coulomb
     friction_coefficient = 0.1
@@ -387,7 +424,39 @@
     search_tolerance = 5.0
     search_radius    = 20.0
     penalty          = 1e7
+  []
+  [wire_bobbin_right]
+    primary   = 'bobbin_right'
+    secondary = 'wire_bottom'
+    model     = coulomb
+    friction_coefficient = 0.1
+    formulation = penalty
+    penalty   = 1e7
     normalize_penalty = true
+    search_tolerance = 3.0
+    search_radius    = 5.0
+  []
+  [wire_bobbin_bottom]
+    primary   = 'bobbin_bottom_face'
+    secondary = 'wire_bottom'
+    model     = coulomb
+    friction_coefficient = 0.1
+    formulation = penalty
+    penalty   = 1e7
+    normalize_penalty = true
+    search_tolerance = 3.0
+    search_radius    = 5.0
+  []
+  [wire_bobbin_left]
+    primary   = 'bobbin_left'
+    secondary = 'wire_bottom'
+    model     = coulomb
+    friction_coefficient = 0.1
+    formulation = penalty
+    penalty   = 1e7
+    normalize_penalty = true
+    search_tolerance = 3.0
+    search_radius    = 5.0
   []
 
   # Wire top vs upper jaw bottom
@@ -445,19 +514,14 @@
     axis_direction = '0 0 1'
   []
 
-  # Upper jaw: sides fixed, top face driven downward
+  # Upper jaw: sides fixed in x, top face driven downward
   [fix_upper_jaw_sides_x]
     type     = DirichletBC
     variable = disp_x
     boundary = 'upper_jaw_left upper_jaw_right upper_jaw_top'
     value    = 0
   []
-  [fix_upper_jaw_sides_y]
-    type     = DirichletBC
-    variable = disp_y
-    boundary = 'upper_jaw_left upper_jaw_right'
-    value    = 0
-  []
+  
   [squeeze_upper_jaw]
     type     = FunctionDirichletBC
     variable = disp_y
@@ -465,19 +529,14 @@
     function = squeeze_ramp_upper
   []
 
-  # Lower jaw: sides fixed, bottom face driven upward
+  # Lower jaw: sides fixed in x, bottom face driven upward
   [fix_lower_jaw_sides_x]
     type     = DirichletBC
     variable = disp_x
     boundary = 'lower_jaw_left lower_jaw_right lower_jaw_bottom'
     value    = 0
   []
-  [fix_lower_jaw_sides_y]
-    type     = DirichletBC
-    variable = disp_y
-    boundary = 'lower_jaw_left lower_jaw_right'
-    value    = 0
-  []
+
   [squeeze_lower_jaw]
     type     = FunctionDirichletBC
     variable = disp_y
