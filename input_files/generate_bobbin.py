@@ -7,7 +7,7 @@ gmsh.model.add("bobbin")
 L  = 16.5   # outer half-size (mm)
 t = 2       # thickness (mm)
 r = 3.0     # outer fillet radius (mm)
-ms = 1.0    # mesh size (mm)
+ms = 0.5    # mesh size (mm)
 
 # Derived inner dimensions (guarantees constant wall thickness)
 Li = L - t          # inner half-size = 14.5mm
