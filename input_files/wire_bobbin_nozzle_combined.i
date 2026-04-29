@@ -112,7 +112,7 @@
   new_boundary = 'bobbin_top'
   block = '1'
   fixed_normal = true
-  variance = 30.0        
+  variance = 20.0        
   []
 
   [bobbin_right]
@@ -122,7 +122,7 @@
     new_boundary = 'bobbin_right'
     block = '1'
     fixed_normal = true
-    variance = 30.0
+    variance = 20.0
   []
 
   [bobbin_bottom_face]
@@ -132,7 +132,7 @@
     new_boundary = 'bobbin_bottom_face'
     block = '1'
     fixed_normal = true
-    variance = 30.0
+    variance = 20.0
   []
 
   [bobbin_left]
@@ -142,7 +142,7 @@
     new_boundary = 'bobbin_left'
     block = '1'
     fixed_normal = true
-    variance = 30.0
+    variance = 20.0
   []
 
   # Wire top face (upper jaw contact secondary)
@@ -357,7 +357,7 @@
         add_variables = true
       []
       [wire]
-        strain = FINITE
+        strain = SMALL
         block = '2'
         add_variables = true
       []
@@ -395,7 +395,7 @@
     block = '2'
   []
   [wire_stress]
-    type = ComputeFiniteStrainElasticStress
+    type = ComputeLinearElasticStress
     block = '2'
   []
 
@@ -526,6 +526,13 @@
     boundary = 'upper_jaw_left upper_jaw_right upper_jaw_top'
     value    = 0
   []
+
+  [fix_upper_jaw_sides_y]
+    type     = DirichletBC
+    variable = disp_y
+    boundary = 'upper_jaw_left upper_jaw_right'
+    value    = 0
+  []
   
   [squeeze_upper_jaw]
     type     = FunctionDirichletBC
@@ -539,6 +546,13 @@
     type     = DirichletBC
     variable = disp_x
     boundary = 'lower_jaw_left lower_jaw_right lower_jaw_bottom'
+    value    = 0
+  []
+
+  [fix_lower_jaw_sides_y]
+    type     = DirichletBC
+    variable = disp_y
+    boundary = 'lower_jaw_left lower_jaw_right'
     value    = 0
   []
 
@@ -571,7 +585,7 @@
 # ============================================================
 [Executioner]
   type = Transient
-  solve_type = PJFNK # More robust for simulataneous contact problems
+  solve_type = PJFNK
 
   petsc_options_iname = '-pc_type -pc_hypre_type -ksp_type -snes_linesearch_type'
   petsc_options_value  = 'hypre    boomeramg      gmres     l2'
@@ -593,7 +607,7 @@
     dt = 0.01
     cutback_factor = 0.5
     growth_factor  = 1.2
-    optimal_iterations  = 30
+    optimal_iterations  = 50
     iteration_window    = 5
   []
 

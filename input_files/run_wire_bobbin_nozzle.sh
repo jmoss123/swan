@@ -4,7 +4,7 @@
 #SBATCH --error=%x_%j.err         
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=8       
-#SBATCH --mem=32G                  
+#SBATCH --mem=16G                  
 #SBATCH --time=12:00:00            
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=jpamoss1@sheffield.ac.uk
