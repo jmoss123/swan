@@ -107,7 +107,7 @@
   # Define bobbin boundaries by normal direction for contact formulation
   [bobbin_top]
   type = SideSetsFromNormalsGenerator
-  input = combined
+  input = spool_end
   normals = '0 1 0'
   new_boundary = 'bobbin_top'
   fixed_normal = true
