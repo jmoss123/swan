@@ -104,47 +104,6 @@
     inputs = 'bobbin wire_id upper_jaw_id lower_jaw_id'
   []
 
-  # Define bobbin boundaries by normal direction for contact formulation
-  [bobbin_top]
-  type = SideSetsFromNormalsGenerator
-  input = spool_end
-  normals = '0 1 0'
-  new_boundary = 'bobbin_top'
-  block = '1'
-  fixed_normal = true
-  variance = 20.0        
-  []
-
-  [bobbin_right]
-    type = SideSetsFromNormalsGenerator
-    input = bobbin_top
-    normals = '1 0 0'
-    new_boundary = 'bobbin_right'
-    block = '1'
-    fixed_normal = true
-    variance = 20.0
-  []
-
-  [bobbin_bottom_face]
-    type = SideSetsFromNormalsGenerator
-    input = bobbin_right
-    normals = '0 -1 0'
-    new_boundary = 'bobbin_bottom_face'
-    block = '1'
-    fixed_normal = true
-    variance = 20.0
-  []
-
-  [bobbin_left]
-    type = SideSetsFromNormalsGenerator
-    input = bobbin_bottom_face
-    normals = '-1 0 0'
-    new_boundary = 'bobbin_left'
-    block = '1'
-    fixed_normal = true
-    variance = 20.0
-  []
-
   # Wire top face (upper jaw contact secondary)
   [wire_top_boundary]
     type = SideSetsAroundSubdomainGenerator
@@ -199,12 +158,20 @@
     top_right   = '13.6 17.1 0'
   []
 
+  # Wire feed guide
+  # Sits between nozzle (x=90..110) and bobbin (x=0): wire path is right->nozzle->feed->bobbin
+  [feed_point]
+    type = BoundingBoxNodeSetGenerator
+    input = tie_point_wire
+    new_boundary = 'feed_point'
+    bottom_left = '60.0 16.0 0'
+    top_right   = '70.0 17.5 0'
   [spool_end]
   type = BoundingBoxNodeSetGenerator
   input = tie_point_wire
   new_boundary = 'spool_end'
   bottom_left = '199.9 16.4 0'
-  top_right   = '200.1 17.1 0' 
+  top_right   = '200.1 17.1 0'   # Right end of wire — the spool
   []
 []
 
@@ -303,13 +270,13 @@
   # Angular velocity — zero during squeeze, 1 rev/s during winding
   [omega]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, 0.0, 3.14159)'
+    expression = 'if(t <= 1.0, 0.0, 6.28318)'
   []
 
   # Cumulative rotation angle — zero during Phase 1, ramps 0->2*pi in Phase 2
   [theta]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, 0.0, 3.14159 * (t - 1.0))'
+    expression = 'if(t <= 1.0, 0.0, 6.28318 * (t - 1.0))'
   []
 
   # Rotation displacement components — wire_bobbin_sim.i (unchanged)
@@ -357,12 +324,12 @@
         add_variables = true
       []
       [wire]
-        strain = SMALL
+        strain = FINITE
         block = '2'
         add_variables = true
       []
       [nozzle]                  
-        strain = SMALL
+        strain = FINITE
         block = '3 4'
         add_variables = true
       []
@@ -395,7 +362,7 @@
     block = '2'
   []
   [wire_stress]
-    type = ComputeLinearElasticStress
+    type = ComputeFiniteStrainElasticStress
     block = '2'
   []
 
@@ -407,7 +374,7 @@
     block = '3 4'
   []
   [nozzle_stress]
-    type = ComputeLinearElasticStress
+    type = ComputeFiniteStrainElasticStress
     block = '3 4'
   []
 []
@@ -419,49 +386,15 @@
 # ============================================================
 [Contact]
   # Wire bottom vs bobbin outer face
-  [wire_bobbin_top]
-    primary   = 'bobbin_top'
+  [wire_bobbin]
+    primary   = 'bobbin_outer'
     secondary = 'wire_bottom'
-    model     = coulomb
-    friction_coefficient = 0.1
+    model     = frictionless
     formulation = penalty
-    penalty          = 1e7
+    search_tolerance = 1.0
+    search_radius    = 2.0
+    penalty          = 1e6
     normalize_penalty = true
-    search_tolerance = 5.0
-    search_radius    = 20.0
-  []
-  [wire_bobbin_right]
-    primary   = 'bobbin_right'
-    secondary = 'wire_bottom'
-    model     = coulomb
-    friction_coefficient = 0.1
-    formulation = penalty
-    penalty   = 1e7
-    normalize_penalty = true
-    search_tolerance = 3.0
-    search_radius    = 5.0
-  []
-  [wire_bobbin_bottom]
-    primary   = 'bobbin_bottom_face'
-    secondary = 'wire_bottom'
-    model     = coulomb
-    friction_coefficient = 0.1
-    formulation = penalty
-    penalty   = 1e7
-    normalize_penalty = true
-    search_tolerance = 3.0
-    search_radius    = 5.0
-  []
-  [wire_bobbin_left]
-    primary   = 'bobbin_left'
-    secondary = 'wire_bottom'
-    model     = coulomb
-    friction_coefficient = 0.1
-    formulation = penalty
-    penalty   = 1e7
-    normalize_penalty = true
-    search_tolerance = 3.0
-    search_radius    = 5.0
   []
 
   # Wire top vs upper jaw bottom
@@ -519,21 +452,19 @@
     axis_direction = '0 0 1'
   []
 
-  # Upper jaw: sides fixed in x, top face driven downward
+  # Upper jaw: sides fixed, top face driven downward
   [fix_upper_jaw_sides_x]
     type     = DirichletBC
     variable = disp_x
     boundary = 'upper_jaw_left upper_jaw_right upper_jaw_top'
     value    = 0
   []
-
   [fix_upper_jaw_sides_y]
     type     = DirichletBC
     variable = disp_y
     boundary = 'upper_jaw_left upper_jaw_right'
     value    = 0
   []
-  
   [squeeze_upper_jaw]
     type     = FunctionDirichletBC
     variable = disp_y
@@ -541,21 +472,19 @@
     function = squeeze_ramp_upper
   []
 
-  # Lower jaw: sides fixed in x, bottom face driven upward
+  # Lower jaw: sides fixed, bottom face driven upward
   [fix_lower_jaw_sides_x]
     type     = DirichletBC
     variable = disp_x
     boundary = 'lower_jaw_left lower_jaw_right lower_jaw_bottom'
     value    = 0
   []
-
   [fix_lower_jaw_sides_y]
     type     = DirichletBC
     variable = disp_y
     boundary = 'lower_jaw_left lower_jaw_right'
     value    = 0
   []
-
   [squeeze_lower_jaw]
     type     = FunctionDirichletBC
     variable = disp_y
@@ -563,6 +492,13 @@
     function = squeeze_ramp_lower
   []
 
+  # Wire feed guide: fixed in y, free in x
+  # Bobbin rotation in Phase 2 provides the x-direction pull
+  [feed_fixed_y]
+    type = DirichletBC
+    variable = disp_y
+    boundary = feed_point
+    value = 0
   [spool_fixed_y]
   type = DirichletBC
   variable = disp_y
@@ -585,15 +521,15 @@
 # ============================================================
 [Executioner]
   type = Transient
-  solve_type = PJFNK
+  solve_type = PJFNK # More robust for simulataneous contact problems
 
   petsc_options_iname = '-pc_type -pc_hypre_type -ksp_type -snes_linesearch_type'
   petsc_options_value  = 'hypre    boomeramg      gmres     l2'
 
-  dt       = 0.01
-  end_time = 3.0
+  dt       = 0.05
+  end_time = 2.0
   dtmin    = 1e-8
-  dtmax    = 0.02
+  dtmax    = 0.05
 
   nl_rel_tol = 1e-5
   nl_abs_tol = 1e-4
@@ -604,11 +540,11 @@
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 0.01
+    dt = 0.02
     cutback_factor = 0.5
     growth_factor  = 1.2
-    optimal_iterations  = 50
-    iteration_window    = 5
+    optimal_iterations  = 30
+    iteration_window    = 10
   []
 
   automatic_scaling    = true
@@ -673,6 +609,19 @@
     type = NodalExtremeValue
     variable = disp_y
     boundary = tie_point_wire
+  []
+
+  # Wire tension at feed guide
+  # Area = 0.5mm thickness x 1mm unit depth = 0.5 mm^2
+  [feed_axial_force]
+    type = PointValue
+    variable = stress_xx
+    point = '63.5 16.5 0'
+  []
+  [tension_magnitude]
+    type = ParsedPostprocessor
+    expression = 'feed_axial_force * 0.5'
+    pp_names = 'feed_axial_force'
   []
 
   # Nozzle contact force
