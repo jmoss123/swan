@@ -101,8 +101,8 @@ gmsh.model.setPhysicalName(1, 2, "bobbin_inner")
 
 # MESH SETTINGS
 
-gmsh.option.setNumber("Mesh.CharacteristicLengthMin", 0.8)
-gmsh.option.setNumber("Mesh.CharacteristicLengthMax", 1.2)
+gmsh.option.setNumber("Mesh.CharacteristicLengthMin", 0.4)
+gmsh.option.setNumber("Mesh.CharacteristicLengthMax", 0.6)
 gmsh.option.setNumber("Mesh.ElementOrder", 1)
 gmsh.option.setNumber("Mesh.RecombineAll", 1)    # Prefer quads
 gmsh.option.setNumber("Mesh.Algorithm", 8)       # Frontal-Delaunay for quads
