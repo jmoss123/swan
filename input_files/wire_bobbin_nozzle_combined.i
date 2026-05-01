@@ -286,14 +286,14 @@
   []
 
   # Nozzle squeeze
-  # Squeezes 0.11mm (closes 0.1mm gap + 0.01mm compression), holds at t=1
+  # Squeezes 0.105mm (closes 0.1mm gap + 0.005mm compression), holds at t=1
   [squeeze_ramp_upper]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, -0.11 * t, -0.11)'
+    expression = 'if(t <= 1.0, -0.105 * t, -0.105)'
   []
   [squeeze_ramp_lower]
     type = ParsedFunction
-    expression = 'if(t <= 1.0,  0.11 * t,  0.11)'
+    expression = 'if(t <= 1.0,  0.105 * t,  0.105)'
   []
 
   # Phase indicator for CSV filtering — wire_through_nozzle.i
@@ -383,7 +383,7 @@
     secondary = 'wire_bottom'
     model     = frictionless
     formulation = penalty
-    penalty = 1e6
+    penalty = 1e8
     normalize_penalty = true
     search_tolerance = 3.0
     search_radius    = 15.0
@@ -624,35 +624,35 @@
   []
 
   # Friction monitoring
-  [friction_force_upper]
+  [nozzle_friction_force_upper]
     type = SideIntegralVariablePostprocessor
     variable = stress_xy
-    boundary = wire_top
+    boundary = upper_jaw_bottom
   []
-  [friction_force_lower]
+  [nozzle_friction_force_lower]
     type = SideIntegralVariablePostprocessor
     variable = stress_xy
-    boundary = wire_bottom
+    boundary = lower_jaw_top
   []
   [total_friction_force_N]
     type = ParsedPostprocessor
-    expression = 'abs(friction_force_upper) + abs(friction_force_lower)'
-    pp_names = 'friction_force_upper friction_force_lower'
+    expression = 'abs(nozzle_friction_force_upper) + abs(nozzle_friction_force_lower)'
+    pp_names = 'nozzle_friction_force_upper nozzle_friction_force_lower'
   []
-  [normal_force_upper]
+  [nozzle_normal_force_upper]
     type = SideIntegralVariablePostprocessor
     variable = stress_yy
-    boundary = wire_top
+    boundary = upper_jaw_bottom
   []
-  [normal_force_lower]
+  [nozzle_normal_force_lower]
     type = SideIntegralVariablePostprocessor
     variable = stress_yy
-    boundary = wire_bottom
+    boundary = lower_jaw_top
   []
   [total_normal_force_N]
     type = ParsedPostprocessor
-    expression = 'abs(normal_force_upper) + abs(normal_force_lower)'
-    pp_names = 'normal_force_upper normal_force_lower'
+    expression = 'abs(nozzle_normal_force_upper) + abs(nozzle_normal_force_lower)'
+    pp_names = 'nozzle_normal_force_upper nozzle_normal_force_lower'
   []
   [effective_friction_coefficient]
     type = ParsedPostprocessor
