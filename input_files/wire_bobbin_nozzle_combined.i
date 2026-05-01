@@ -41,7 +41,7 @@
     ymin = 16.5
     ymax = 17.0
     nx = 370        # ~1mm elements along wire length
-    ny = 4
+    ny = 2
     elem_type = QUAD4
     boundary_name_prefix = wire
     boundary_id_offset = 10   # Avoids conflict with bobbin boundaries
@@ -102,6 +102,13 @@
   [combined]
     type = CombinerGenerator
     inputs = 'bobbin wire_id upper_jaw_id lower_jaw_id'
+  []
+
+  [bobbin_full_outer_boundary]
+    type = SideSetsAroundSubdomainGenerator
+    input = combined
+    new_boundary = 'bobbin_full_outer'
+    block = '1'           # bobbin block ID from gmsh
   []
 
   # Wire top face (upper jaw contact secondary)
@@ -379,7 +386,7 @@
 [Contact]
   # Wire bottom vs bobbin outer face
   [wire_bobbin]
-    primary   = 'bobbin_outer'
+    primary   = 'bobbin_full_outer'
     secondary = 'wire_bottom'
     model     = frictionless
     formulation = penalty
