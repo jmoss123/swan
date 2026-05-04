@@ -26,7 +26,9 @@
 # MESH
 # ============================================================
 [Mesh]
-  # BOBBIN: loaded from gmsh
+  patch_update_strategy = iteration
+  patch_size = 100
+  # BOBBIN: Load from gmsh file
   [bobbin]
     type = FileMeshGenerator
     file = "bobbin_fillet.msh"
@@ -114,7 +116,7 @@
   # Wire top face (upper jaw contact secondary)
   [wire_top_boundary]
     type = SideSetsAroundSubdomainGenerator
-    input = combined
+    input = bobbin_full_outer_boundary
     new_boundary = 'wire_top'
     block = '2'
     normal = '0 1 0'
@@ -293,14 +295,14 @@
   []
 
   # Nozzle squeeze
-  # Squeezes 0.105mm (closes 0.1mm gap + 0.005mm compression), holds at t=1
+  # Squeezes 0.104mm (closes 0.1mm gap + 0.004mm compression), holds at t=1
   [squeeze_ramp_upper]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, -0.105 * t, -0.105)'
+    expression = 'if(t <= 1.0, -0.104 * t, -0.104)'
   []
   [squeeze_ramp_lower]
     type = ParsedFunction
-    expression = 'if(t <= 1.0,  0.105 * t,  0.105)'
+    expression = 'if(t <= 1.0,  0.104 * t,  0.104)'
   []
 
   # Phase indicator for CSV filtering — wire_through_nozzle.i
@@ -318,19 +320,27 @@
   [SolidMechanics]
     [QuasiStatic]
       [bobbin]
-        strain = FINITE
         block = '1'
+        strain = FINITE
         add_variables = true
+        generate_output = 'vonmises_stress'
+        displacements = 'disp_x disp_y'
       []
+
       [wire]
-        strain = FINITE
         block = '2'
-        add_variables = true
-      []
-      [nozzle]                  
         strain = FINITE
+        add_variables = true       
+        generate_output = 'vonmises_stress effective_plastic_strain'
+        displacements = 'disp_x disp_y'
+      []
+
+      [jaws]
         block = '3 4'
+        strain = FINITE
         add_variables = true
+        generate_output = 'vonmises_stress'
+        displacements = 'disp_x disp_y'
       []
     []
   []
@@ -360,8 +370,20 @@
     poissons_ratio = 0.34
     block = '2'
   []
+
+  [wire_plasticity]
+    type = IsotropicPlasticityStressUpdate
+    yield_stress = 200    # Mpa (annealed copper)
+    hardening_constant = 0    # EPP
+    use_substepping = INCREMENT_BASED
+    max_inelastic_increment = 0.001
+    block = '2'
+  []
+
   [wire_stress]
-    type = ComputeFiniteStrainElasticStress
+    type = ComputeMultipleInelasticStress
+    inelastic_models = 'wire_plasticity'
+    tangent_operator = elastic
     block = '2'
   []
 
@@ -390,6 +412,8 @@
     secondary = 'wire_bottom'
     model     = frictionless
     formulation = penalty
+    al_penetration_tolerance = 1e-4
+    al_incremental_slip_tolerance = 1e-4
     penalty = 1e8
     normalize_penalty = true
     search_tolerance = 3.0
@@ -520,23 +544,23 @@
   petsc_options_value  = 'hypre    boomeramg      gmres     l2'
 
   dt       = 0.05
-  end_time = 2.0
-  dtmin    = 1e-8
+  end_time = 1.3
+  dtmin    = 1e-12
   dtmax    = 0.05
 
   nl_rel_tol = 1e-5
   nl_abs_tol = 1e-4
-  nl_max_its = 100
+  nl_max_its = 200
 
-  l_max_its = 200
+  l_max_its = 300
   l_tol     = 1e-4
 
   [TimeStepper]
     type = IterationAdaptiveDT
     dt = 0.02
-    cutback_factor = 0.5
-    growth_factor  = 1.2
-    optimal_iterations  = 30
+    cutback_factor = 0.4
+    growth_factor  = 1.1
+    optimal_iterations  = 20
     iteration_window    = 10
   []
 
@@ -572,16 +596,12 @@
 # ============================================================
 [Postprocessors]
   # Wire stress/strain
-  [wire_max_stress]
-    type = ElementExtremeValue
-    variable = stress_xx
-    block = '2'
-  []
   [wire_avg_strain]
     type = ElementAverageValue
     variable = strain_xx
     block = '2'
   []
+
   [wire_max_vonmises]
     type = ElementExtremeValue
     variable = vonmises
@@ -593,16 +613,6 @@
     type = FunctionValuePostprocessor
     function = theta
   []
-  [tie_point_disp_x]
-    type = NodalExtremeValue
-    variable = disp_x
-    boundary = tie_point_wire
-  []
-  [tie_point_disp_y]
-    type = NodalExtremeValue
-    variable = disp_y
-    boundary = tie_point_wire
-  []
 
   # Wire tension at feed guide
   # Area = 0.5mm thickness x 1mm unit depth = 0.5 mm^2
@@ -611,23 +621,11 @@
     variable = stress_xx
     point = '63.5 16.5 0'
   []
+
   [tension_magnitude]
     type = ParsedPostprocessor
     expression = 'feed_axial_force * 0.5'
     pp_names = 'feed_axial_force'
-  []
-
-  # Nozzle contact force
-  # Area = nozzle width (20mm) x unit depth (1mm) = 20 mm^2
-  [nozzle_stress_yy]
-    type = PointValue
-    variable = stress_yy
-    point = '100.0 16.75 0'
-  []
-  [contact_force]
-    type = ParsedPostprocessor
-    expression = 'abs(nozzle_stress_yy) * 20.0'
-    pp_names = 'nozzle_stress_yy'
   []
 
   # Friction monitoring
@@ -636,36 +634,42 @@
     variable = stress_xy
     boundary = upper_jaw_bottom
   []
+
   [nozzle_friction_force_lower]
     type = SideIntegralVariablePostprocessor
     variable = stress_xy
     boundary = lower_jaw_top
   []
+
   [total_friction_force_N]
     type = ParsedPostprocessor
     expression = 'abs(nozzle_friction_force_upper) + abs(nozzle_friction_force_lower)'
     pp_names = 'nozzle_friction_force_upper nozzle_friction_force_lower'
   []
+
   [nozzle_normal_force_upper]
     type = SideIntegralVariablePostprocessor
     variable = stress_yy
     boundary = upper_jaw_bottom
   []
+
   [nozzle_normal_force_lower]
     type = SideIntegralVariablePostprocessor
     variable = stress_yy
     boundary = lower_jaw_top
   []
+
   [total_normal_force_N]
     type = ParsedPostprocessor
     expression = 'abs(nozzle_normal_force_upper) + abs(nozzle_normal_force_lower)'
     pp_names = 'nozzle_normal_force_upper nozzle_normal_force_lower'
   []
-  [effective_friction_coefficient]
-    type = ParsedPostprocessor
-    expression = 'if(total_normal_force_N > 1e-6,
-                    total_friction_force_N / total_normal_force_N, 0)'
-    pp_names = 'total_friction_force_N total_normal_force_N'
+
+  [max_plastic_strain]
+    type = ElementExtremeValue
+    variable = effective_plastic_strain
+    block = '2'
+    value_type = max
   []
 
   # Phase indicator
