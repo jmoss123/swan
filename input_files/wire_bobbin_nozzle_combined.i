@@ -209,6 +209,10 @@
     order = CONSTANT
     family = MONOMIAL
   []
+  [effective_plastic_strain]
+    order = CONSTANT
+    family = MONOMIAL
+  []
 []
 
 
@@ -260,6 +264,12 @@
     variable = vonmises
     rank_two_tensor = stress
     scalar_type = VonMisesStress
+  []
+  [plastic_strain_aux]
+    type = MaterialRealAux
+    variable = effective_plastic_strain
+    property = effective_plastic_strain
+    block = '2'
   []
 []
 
@@ -323,7 +333,6 @@
         block = '1'
         strain = FINITE
         add_variables = true
-        generate_output = 'vonmises_stress'
         displacements = 'disp_x disp_y'
       []
 
@@ -331,7 +340,6 @@
         block = '2'
         strain = FINITE
         add_variables = true       
-        generate_output = 'vonmises_stress effective_plastic_strain'
         displacements = 'disp_x disp_y'
       []
 
@@ -339,7 +347,6 @@
         block = '3 4'
         strain = FINITE
         add_variables = true
-        generate_output = 'vonmises_stress'
         displacements = 'disp_x disp_y'
       []
     []
