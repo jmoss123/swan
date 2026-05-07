@@ -234,7 +234,7 @@
     variable = stress_xy
     rank_two_tensor = stress
     index_i = 0
-    index_j = 0
+    index_j = 1
     block = '2'
   []
   [strain_xx_aux]
@@ -401,13 +401,16 @@
 [Contact]
   # Wire bottom vs bobbin outer face
   [wire_bobbin]
-    primary   = 'bobbin_full_outer'
-    secondary = 'wire_bottom'
-    model     = coulomb
+    primary              = 'bobbin_full_outer'
+    secondary            = 'wire_bottom'
+    model                = coulomb
     friction_coefficient = 0.15
-    formulation = mortar
+    formulation          = penalty
+    penalty              = 1e9
+    normalize_penalty    = true
+    search_radius        = 1.0
+    search_tolerance     = 0.1
     correct_edge_dropping = true
-    normal_smoothing_distance = 0.15
   []
 
   # Wire top vs upper jaw bottom
@@ -447,7 +450,7 @@
   [bobbin_rotate_x]
     type = DisplacementAboutAxis
     variable = disp_x
-    boundary = 'bobbin_inner tie_point_wire'
+    boundary = 'bobbin_inner'
     component = 0
     function = theta
     angle_units = radians
@@ -457,7 +460,7 @@
   [bobbin_rotate_y]
     type = DisplacementAboutAxis
     variable = disp_y
-    boundary = 'bobbin_inner tie_point_wire'
+    boundary = 'bobbin_inner'
     component = 1
     function = theta
     angle_units = radians
@@ -510,6 +513,24 @@
   variable = disp_y
   boundary = spool_end
   value = 0
+  []
+[]
+
+# ============================================================
+# CONSTRAINTS
+# ============================================================
+[Constraints]
+  [tie_x]
+    type      = EqualValueConstraint
+    variable  = disp_x
+    primary   = 'tie_point_bobbin'
+    secondary = 'tie_point_wire'
+  []
+  [tie_y]
+    type      = EqualValueConstraint
+    variable  = disp_y
+    primary   = 'tie_point_bobbin'
+    secondary = 'tie_point_wire'
   []
 []
 
