@@ -209,10 +209,6 @@
     order = CONSTANT
     family = MONOMIAL
   []
-  [effective_plastic_strain]
-    order = CONSTANT
-    family = MONOMIAL
-  []
 []
 
 
@@ -223,6 +219,7 @@
     rank_two_tensor = stress
     index_i = 0
     index_j = 0
+    block = '2'
   []
   [stress_yy_aux]
     type = RankTwoAux
@@ -230,13 +227,15 @@
     rank_two_tensor = stress
     index_i = 1
     index_j = 1
+    block = '2'
   []
   [stress_xy_aux]
     type = RankTwoAux
     variable = stress_xy
     rank_two_tensor = stress
     index_i = 0
-    index_j = 1
+    index_j = 0
+    block = '2'
   []
   [strain_xx_aux]
     type = RankTwoAux
@@ -244,6 +243,7 @@
     rank_two_tensor = mechanical_strain
     index_i = 0
     index_j = 0
+    block = '2'
   []
   [strain_yy_aux]
     type = RankTwoAux
@@ -251,6 +251,7 @@
     rank_two_tensor = mechanical_strain
     index_i = 1
     index_j = 1
+    block = '2'
   []
   [strain_xy_aux]
     type = RankTwoAux
@@ -258,17 +259,13 @@
     rank_two_tensor = mechanical_strain
     index_i = 0
     index_j = 1
+    block = '2'
   []
   [vonmises_aux]
     type = RankTwoScalarAux
     variable = vonmises
     rank_two_tensor = stress
     scalar_type = VonMisesStress
-  []
-  [plastic_strain_aux]
-    type = MaterialRealAux
-    variable = effective_plastic_strain
-    property = effective_plastic_strain
     block = '2'
   []
 []
@@ -378,19 +375,8 @@
     block = '2'
   []
 
-  [wire_plasticity]
-    type = IsotropicPlasticityStressUpdate
-    yield_stress = 200    # Mpa (annealed copper)
-    hardening_constant = 0    # EPP
-    use_substepping = INCREMENT_BASED
-    max_inelastic_increment = 0.001
-    block = '2'
-  []
-
   [wire_stress]
-    type = ComputeMultipleInelasticStress
-    inelastic_models = 'wire_plasticity'
-    tangent_operator = elastic
+    type = ComputeFiniteStrainElasticStress
     block = '2'
   []
 
@@ -417,14 +403,10 @@
   [wire_bobbin]
     primary   = 'bobbin_full_outer'
     secondary = 'wire_bottom'
-    model     = frictionless
-    formulation = penalty
-    al_penetration_tolerance = 1e-4
-    al_incremental_slip_tolerance = 1e-4
-    penalty = 1e8
-    normalize_penalty = true
-    search_tolerance = 3.0
-    search_radius    = 15.0
+    model     = coulomb
+    friction_coefficient = 0.15
+    formulation = mortar
+    correct_edge_dropping = true
     normal_smoothing_distance = 0.15
   []
 
@@ -531,48 +513,48 @@
   []
 []
 
-
+# ============================================================
+# PRECONDITIONING & EXECUTIONER
+# ============================================================
 [Preconditioning]
   [SMP]
     type = SMP
     full = true
+    petsc_options_iname = '-pc_type -pc_factor_mat_solver_package'
+    petsc_options_value  = 'lu       mumps'
   []
 []
 
-
-# ============================================================
-# EXECUTIONER
-# ============================================================
 [Executioner]
   type = Transient
-  solve_type = PJFNK # More robust for simulataneous contact problems
+  solve_type = PJFNK
 
-  petsc_options_iname = '-pc_type -pc_hypre_type -ksp_type -snes_linesearch_type'
-  petsc_options_value  = 'hypre    boomeramg      gmres     l2'
+  petsc_options_iname = '-ksp_type -ksp_gmres_restart -snes_linesearch_type'
+  petsc_options_value  = 'gmres     200                bt'
 
-  dt       = 0.05
+  dt       = 0.01
   end_time = 1.3
-  dtmin    = 1e-12
-  dtmax    = 0.05
+  dtmin    = 1e-9
+  dtmax    = 0.075
 
-  nl_rel_tol = 1e-5
-  nl_abs_tol = 1e-4
-  nl_max_its = 200
+  nl_rel_tol = 1e-4
+  nl_abs_tol = 1e-3
+  nl_max_its = 50
 
-  l_max_its = 300
+  l_max_its = 200
   l_tol     = 1e-4
 
   [TimeStepper]
     type = IterationAdaptiveDT
     dt = 0.02
-    cutback_factor = 0.4
-    growth_factor  = 1.1
-    optimal_iterations  = 20
+    cutback_factor = 0.5
+    growth_factor  = 1.2
+    optimal_iterations  = 30
     iteration_window    = 10
   []
 
   automatic_scaling    = true
-  compute_scaling_once = false
+  compute_scaling_once = true
 []
 
 
@@ -582,18 +564,26 @@
 [Outputs]
   [exodus]
     type = Exodus
-    interval = 10
+    interval = 50
   []
+
   [csv]
     type = CSV
-    interval = 10
+    interval = 50
   []
+
   print_linear_residuals = true
 
   [mesh_out]
     type = Exodus
     execute_on = 'INITIAL'
     file_base  = 'mesh_check'
+  []
+
+  [checkpoint]
+    type = Checkpoint
+    num_files = 3
+    interval = 20
   []
 []
 
@@ -670,13 +660,6 @@
     type = ParsedPostprocessor
     expression = 'abs(nozzle_normal_force_upper) + abs(nozzle_normal_force_lower)'
     pp_names = 'nozzle_normal_force_upper nozzle_normal_force_lower'
-  []
-
-  [max_plastic_strain]
-    type = ElementExtremeValue
-    variable = effective_plastic_strain
-    block = '2'
-    value_type = max
   []
 
   # Phase indicator
