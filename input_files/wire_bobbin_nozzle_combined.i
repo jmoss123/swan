@@ -398,47 +398,46 @@
 # CONTACT
 # 3 contact pairs: wire-bobbin (frictionless), wire-upper jaw, wire-lower jaw (Coulomb)
 # ============================================================
-[Contact]
-  # Wire bottom vs bobbin outer face
-  [wire_bobbin]
-    primary              = 'bobbin_full_outer'
-    secondary            = 'wire_bottom'
-    model                = coulomb
-    friction_coefficient = 0.15
-    formulation          = penalty
-    penalty              = 1e9
-    normalize_penalty    = true
-    search_radius        = 1.0
-    search_tolerance     = 0.1
-    correct_edge_dropping = true
-  []
-
-  # Wire top vs upper jaw bottom
-  [upper_contact]
-    primary   = upper_jaw_bottom
-    secondary = wire_top
-    model     = coulomb
-    friction_coefficient = 0.15
-    formulation = penalty
-    penalty     = 1e6
-    normalize_penalty = true
-    search_tolerance = 1.0
-    search_radius    = 2.0
-  []
-
-  # Wire bottom vs lower jaw top
-  [lower_contact]
-    primary   = lower_jaw_top
-    secondary = wire_bottom
-    model     = coulomb
-    friction_coefficient = 0.15
-    formulation = penalty
-    penalty     = 1e6
-    normalize_penalty = true
-    search_tolerance = 1.0
-    search_radius    = 2.0
-  []
-[]
+#[Contact]
+#  # Wire bottom vs bobbin outer face
+#  [wire_bobbin]
+#    primary              = 'bobbin_full_outer'
+#    secondary            = 'wire_bottom'
+#    model                = coulomb
+#    friction_coefficient = 0.15
+#    formulation          = penalty
+#    penalty              = 1e9
+#    normalize_penalty    = true
+#    search_radius        = 1.0
+#    search_tolerance     = 0.1
+#  []
+#
+#  # Wire top vs upper jaw bottom
+#  [upper_contact]
+#    primary   = upper_jaw_bottom
+#    secondary = wire_top
+#    model     = coulomb
+#    friction_coefficient = 0.15
+#    formulation = penalty
+#    penalty     = 1e6
+#    normalize_penalty = true
+#    search_tolerance = 1.0
+#    search_radius    = 2.0
+#  []
+#
+#  # Wire bottom vs lower jaw top
+#  [lower_contact]
+#    primary   = lower_jaw_top
+#    secondary = wire_bottom
+#    model     = coulomb
+#    friction_coefficient = 0.15
+#    formulation = penalty
+#    penalty     = 1e6
+#    normalize_penalty = true
+#    search_tolerance = 1.0
+#    search_radius    = 2.0
+#  []
+#[]
 
 
 # ============================================================
@@ -521,13 +520,13 @@
 # ============================================================
 [Constraints]
   [tie_x]
-    type      = EqualValueConstraint
+    type      = TiedValueConstraint
     variable  = disp_x
     primary   = 'tie_point_bobbin'
     secondary = 'tie_point_wire'
   []
   [tie_y]
-    type      = EqualValueConstraint
+    type      = TiedValueConstraint
     variable  = disp_y
     primary   = 'tie_point_bobbin'
     secondary = 'tie_point_wire'
