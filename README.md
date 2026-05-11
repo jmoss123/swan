@@ -1,5 +1,7 @@
-swan
+Project SWAN
 =====
+**S**ynchronous **W**inding **AN**alysis
+
 
 Fork "swan" to create a new MOOSE-based application.
 
