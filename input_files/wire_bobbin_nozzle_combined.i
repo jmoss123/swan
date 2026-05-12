@@ -39,10 +39,10 @@
     type = GeneratedMeshGenerator
     dim = 2
     xmin = 13.5
-    xmax = 200
+    xmax = 300
     ymin = 16.5
     ymax = 17.0
-    nx = 370        # ~1mm elements along wire length
+    nx = 1146        # ~0.25mm elements along wire length
     ny = 2
     elem_type = QUAD4
     boundary_name_prefix = wire
@@ -64,7 +64,7 @@
     xmax = 110
     ymin = 17.1
     ymax = 21.1
-    nx = 20
+    nx = 40
     ny = 8
     elem_type = QUAD4
     boundary_name_prefix = upper_jaw
@@ -86,7 +86,7 @@
     xmax = 110
     ymin = 12.4
     ymax = 16.4
-    nx = 20
+    nx = 40
     ny = 8
     elem_type = QUAD4
     boundary_name_prefix = lower_jaw
@@ -113,22 +113,31 @@
     block = '1'           # bobbin block ID from gmsh
   []
 
-  # Wire top face (upper jaw contact secondary)
-  [wire_top_boundary]
+  [wire_all_boundary]
     type = SideSetsAroundSubdomainGenerator
     input = bobbin_full_outer_boundary
+    new_boundary = 'wire_all'
+    block = '2' 
+  []
+
+  # Wire top face (upper jaw contact secondary)
+  [wire_top_boundary]
+    type = SideSetsFromNormalsGenerator
+    input = wire_all_boundary
+    boundaries = 'wire_all'
     new_boundary = 'wire_top'
-    block = '2'
-    normal = '0 1 0'
+    normals = '0 1 0'
+    variance = 0.1
   []
 
   # Wire bottom face (bobbin contact + lower jaw contact secondary)
   [wire_bottom_boundary]
-    type = SideSetsAroundSubdomainGenerator
+    type = SideSetsFromNormalsGenerator
     input = wire_top_boundary
+    boundaries = 'wire_all'
     new_boundary = 'wire_bottom'
-    block = '2'
-    normal = '0 -1 0'
+    normals = '0 -1 0'
+    variance = 0.1
   []
 
   # Upper jaw bottom face (contact primary)
@@ -149,19 +158,10 @@
     normal = '0 1 0'
   []
 
-  # Bobbin tie point
-  [tie_point_bobbin]
-    type = ExtraNodesetGenerator
-    input = lower_jaw_top_boundary
-    new_boundary = 'tie_point_bobbin'
-    coord = '13.5 16.5 0'
-    tolerance = 0.5
-  []
-
   # Wire attachment nodes at bobbin vertex
   [tie_point_wire]
     type = BoundingBoxNodeSetGenerator
-    input = tie_point_bobbin
+    input = lower_jaw_top_boundary
     new_boundary = 'tie_point_wire'
     bottom_left = '13.4 16.4 0'
     top_right   = '13.6 17.1 0'
@@ -355,11 +355,11 @@
 # MATERIALS
 # ============================================================
 [Materials]
-  # Bobbin: steel 
+  # Bobbin: Nylon 66 
   [bobbin_elasticity]
     type = ComputeIsotropicElasticityTensor
-    youngs_modulus = 200000 # MPa
-    poissons_ratio = 0.3
+    youngs_modulus = 10000 # MPa
+    poissons_ratio = 0.38
     block = '1'
   []
   [bobbin_stress]
@@ -403,13 +403,12 @@
   [wire_bobbin]
     primary              = 'bobbin_full_outer'
     secondary            = 'wire_bottom'
-    model                = coulomb
-    friction_coefficient = 0.15
+    model                = frictionless
     formulation          = penalty
     penalty              = 1e9
-    normalize_penalty    = true
-    search_radius        = 1.0
-    search_tolerance     = 0.1
+    normalize_penalty    = false
+    search_radius        = 0.1
+    search_tolerance     = 0.01
   []
 
   # Wire top vs upper jaw bottom
@@ -513,27 +512,26 @@
   boundary = spool_end
   value = 0
   []
-[]
 
-# ============================================================
-# CONSTRAINTS
-# ============================================================
-[Constraints]
-  [tie_x]
-    type      = EqualValueConstraint
-    variable  = disp_x
-    primary   = 'tie_point_bobbin'
-    secondary = 'tie_point_wire'
-    formulation = penalty
-    penalty = 1e10
+  [wire_attach_x]
+    type = DisplacementAboutAxis
+    variable = disp_x
+    boundary = 'tie_point_wire'
+    component = 0
+    function = theta
+    angle_units = radians
+    axis_origin = '0 0 0'
+    axis_direction = '0 0 1'
   []
-  [tie_y]
-    type      = EqualValueConstraint
-    variable  = disp_y
-    primary   = 'tie_point_bobbin'
-    secondary = 'tie_point_wire'
-    formulation = penalty
-    penalty = 1e10
+  [wire_attach_y]
+    type = DisplacementAboutAxis
+    variable = disp_y
+    boundary = 'tie_point_wire'
+    component = 1
+    function = theta
+    angle_units = radians
+    axis_origin = '0 0 0'
+    axis_direction = '0 0 1'
   []
 []
 
@@ -551,34 +549,33 @@
 
 [Executioner]
   type = Transient
-  solve_type = PJFNK
+  solve_type = NEWTON
 
-  petsc_options_iname = '-ksp_type -ksp_gmres_restart -snes_linesearch_type'
-  petsc_options_value  = 'gmres     200                bt'
+  petsc_options_iname = '-ksp_type -snes_linesearch_type'
+  petsc_options_value  = 'preonly    bt'
 
   dt       = 0.01
   end_time = 1.3
-  dtmin    = 1e-9
-  dtmax    = 0.075
+  dtmin    = 1e-8
+  dtmax    = 0.05
 
   nl_rel_tol = 1e-4
   nl_abs_tol = 1e-3
-  nl_max_its = 50
+  nl_max_its = 15
 
-  l_max_its = 200
-  l_tol     = 1e-4
+  l_max_its = 100
+  l_tol     = 1e-3
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 0.02
+    dt = 0.01
     cutback_factor = 0.5
     growth_factor  = 1.2
-    optimal_iterations  = 30
-    iteration_window    = 10
+    optimal_iterations  = 15
+    iteration_window    = 7
   []
 
   automatic_scaling    = true
-  compute_scaling_once = true
 []
 
 
@@ -588,12 +585,12 @@
 [Outputs]
   [exodus]
     type = Exodus
-    interval = 50
+    interval = 75
   []
 
   [csv]
     type = CSV
-    interval = 50
+    interval = 75
   []
 
   print_linear_residuals = true
@@ -637,17 +634,17 @@
 
   # Wire tension at feed guide
   # Area = 0.5mm thickness x 1mm unit depth = 0.5 mm^2
-  [feed_axial_force]
-    type = PointValue
-    variable = stress_xx
-    point = '63.5 16.5 0'
-  []
+ # [feed_axial_force]
+ #   type = PointValue
+ #   variable = stress_xx
+ #   point = '63.5 16.5 0'
+ # []
 
-  [tension_magnitude]
-    type = ParsedPostprocessor
-    expression = 'feed_axial_force * 0.5'
-    pp_names = 'feed_axial_force'
-  []
+ # [tension_magnitude]
+ #   type = ParsedPostprocessor
+ #   expression = 'feed_axial_force * 0.5'
+ #   pp_names = 'feed_axial_force'
+ # []
 
   # Friction monitoring
   [nozzle_friction_force_upper]
