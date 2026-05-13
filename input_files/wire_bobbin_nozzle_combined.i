@@ -173,7 +173,8 @@
     new_boundary = 'spool_end'
     normals = '1 0 0'
     variance = 0.1
-    fixed_normal = true 
+    fixed_normal = true
+    boundaries = 'wire_all' 
   []
 []
 
@@ -334,21 +335,21 @@
     [QuasiStatic]
       [bobbin]
         block = '1'
-        strain = INCREMENTAL
+        strain = FINITE
         add_variables = true
         displacements = 'disp_x disp_y'
       []
 
       [wire]
         block = '2'
-        strain = INCREMENTAL
+        strain = FINITE
         add_variables = true       
         displacements = 'disp_x disp_y'
       []
 
       [jaws]
         block = '3 4'
-        strain = INCREMENTAL
+        strain = FINITE
         add_variables = true
         displacements = 'disp_x disp_y'
       []
@@ -411,7 +412,7 @@
     secondary            = 'wire_bottom'
     model                = frictionless
     formulation          = penalty
-    penalty              = 1e9
+    penalty              = 1e6
     normalize_penalty    = false
     search_radius        = 0.1
     search_tolerance     = 0.01
@@ -421,22 +422,26 @@
   [upper_contact]
     primary   = upper_jaw_bottom
     secondary = wire_top
-    model     = frictionless
+    model     = coulomb
+    friction_coefficient = 0.15
     formulation = penalty
+    normalise_penalty = true
     penalty     = 1e6
-    search_tolerance = 0.5
-    search_radius    = 0.05
+    search_tolerance = 1.0
+    search_radius    = 0.1
   []
 
   # Wire bottom vs lower jaw top
   [lower_contact]
     primary   = lower_jaw_top
     secondary = wire_bottom
-    model     = frictionless
+    model     = coulomb
+    friction_coefficiert = 0.15
     formulation = penalty
     penalty     = 1e6
-    search_tolerance = 0.5
-    search_radius    = 0.05
+    normalise_penalty = true
+    search_tolerance = 1.0
+    search_radius    = 0.1
   []
 []
 
@@ -535,6 +540,13 @@
     axis_origin = '0 0 0'
     axis_direction = '0 0 1'
   []
+
+  [spool_fixed_y]
+    type     = DirichletBC
+    variable = disp_y
+    boundary = spool_end
+    value    = 0
+  []
 []
 
 # ============================================================
@@ -551,10 +563,10 @@
 
 [Executioner]
   type = Transient
-  solve_type = PJFNK
-
-  petsc_options_iname = '-ksp_type -ksp_gmres_restart -snes_linesearch_type'
-  petsc_options_value  = 'gmres      200                  bt'
+  
+  solve_type = NEWTON
+  petsc_options_iname = '-pc_type -pc_factor_mat_solver_package'
+  petsc_options_value  = 'lu       mumps'
 
   dt       = 0.01
   end_time = 1.3
