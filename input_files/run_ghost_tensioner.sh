@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=wire_bobbin_nozzle
+#SBATCH --job-name=ghost_tensioner
 #SBATCH --output=%x_%j.out        
 #SBATCH --error=%x_%j.err         
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=16       
-#SBATCH --mem=16G                  
-#SBATCH --time=12:00:00            
+#SBATCH --mem=8G                  
+#SBATCH --time=24:00:00            
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=jpamoss1@sheffield.ac.uk
 

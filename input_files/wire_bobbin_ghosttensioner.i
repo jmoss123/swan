@@ -56,50 +56,6 @@
     new_block = '2'
   []
 
-  # UPPER NOZZLE JAW
-  [upper_jaw]
-    type = GeneratedMeshGenerator
-    dim = 2
-    xmin = 90
-    xmax = 110
-    ymin = 17.1
-    ymax = 21.1
-    nx = 40
-    ny = 8
-    elem_type = QUAD4
-    boundary_name_prefix = upper_jaw
-    boundary_id_offset = 30   # Avoids conflict with wire and bobbin boundaries
-  []
-
-  [upper_jaw_id]
-    type = RenameBlockGenerator
-    input = upper_jaw
-    old_block = '0'
-    new_block = '3'
-  []
-
-  # LOWER NOZZLE JAW
-  [lower_jaw]
-    type = GeneratedMeshGenerator
-    dim = 2
-    xmin = 90
-    xmax = 110
-    ymin = 12.4
-    ymax = 16.4
-    nx = 40
-    ny = 8
-    elem_type = QUAD4
-    boundary_name_prefix = lower_jaw
-    boundary_id_offset = 50   # Avoids conflict with all other boundaries
-  []
-
-  [lower_jaw_id]
-    type = RenameBlockGenerator
-    input = lower_jaw
-    old_block = '0'
-    new_block = '4'
-  []
-
   # Combine all four meshes
   [combined]
     type = CombinerGenerator
@@ -140,39 +96,22 @@
     variance = 0.1
   []
 
-  # Upper jaw bottom face (contact primary)
-  #[upper_jaw_bottom_boundary]
-  #  type = SideSetsAroundSubdomainGenerator
-  #  input = wire_bottom_boundary
-  #  new_boundary = 'upper_jaw_bottom'
-  #  block = '3'
-  #  normal = '0 -1 0'
-  #[]
-
-  # Lower jaw top face (contact primary)
-  #[lower_jaw_top_boundary]
-  #  type = SideSetsAroundSubdomainGenerator
-  #  input = upper_jaw_bottom_boundary
-  #  new_boundary = 'lower_jaw_top'
-  #  block = '4'
-  #  normal = '0 1 0'
-  #[]
-
   # Wire attachment nodes at bobbin vertex
   [tie_point_wire]
     type = BoundingBoxNodeSetGenerator
-    input = lower_jaw_top_boundary
+    input = wire_bottom_boundary
     new_boundary = 'tie_point_wire'
     bottom_left = '13.4 16.4 0'
     top_right   = '13.6 17.1 0'
   []
 
   [spool_end]
-  type = BoundingBoxNodeSetGenerator
-  input = tie_point_wire
-  new_boundary = 'spool_end'
-  bottom_left = '199.9 16.4 0'
-  top_right   = '200.1 17.1 0' 
+    type = SideSetsFromNormalsGenerator
+    input = tie_point_wire
+    new_boundary = 'spool_end'
+    normals = '1 0 0'
+    variance = 0.1
+    fixed_normal = true
   []
 []
 
@@ -312,6 +251,11 @@
     expression = 'if(t <= 1.0,  0.104 * t,  0.104)'
   []
 
+  [backtension_ramp]
+    type = ParsedFunction
+    expression = 'if(t <= 1.0, 200 * t, 200)'
+  []
+
   # Phase indicator for CSV filtering — wire_through_nozzle.i
   [phase_indicator]
     type = ParsedFunction
@@ -339,13 +283,6 @@
         add_variables = true       
         displacements = 'disp_x disp_y'
       []
-
-      #[jaws]
-      #  block = '3 4'
-      #  strain = FINITE
-      #  add_variables = true
-      #  displacements = 'disp_x disp_y'
-      #[]
     []
   []
 []
@@ -379,18 +316,6 @@
     type = ComputeFiniteStrainElasticStress
     block = '2'
   []
-
-  # Nozzle jaws: steel
-  #[nozzle_elasticity]
-  #  type = ComputeIsotropicElasticityTensor
-  #  youngs_modulus = 200000 # MPa
-  #  poissons_ratio = 0.3
-  #  block = '3 4'
-  #[]
-  #[nozzle_stress]
-  #  type = ComputeFiniteStrainElasticStress
-  #  block = '3 4'
-  #[]
 []
 
 
@@ -410,32 +335,6 @@
     search_radius        = 0.1
     search_tolerance     = 0.01
   []
-
-  # Wire top vs upper jaw bottom
-  #[upper_contact]
-  #  primary   = upper_jaw_bottom
-  #  secondary = wire_top
-  #  model     = coulomb
-  #  friction_coefficient = 0.15
-  #  formulation = penalty
-  #  penalty     = 1e6
-  #  normalize_penalty = true
-  #  search_tolerance = 1.0
-  #  search_radius    = 2.0
-  #[]
-
-  # Wire bottom vs lower jaw top
-  #[lower_contact]
-  #  primary   = lower_jaw_top
-  #  secondary = wire_bottom
-  #  model     = coulomb
-  #  friction_coefficient = 0.15
-  #  formulation = penalty
-  #  penalty     = 1e6
-  #  normalize_penalty = true
-  #  search_tolerance = 1.0
-  #  search_radius    = 2.0
-  #[]
 []
 
 
@@ -466,58 +365,11 @@
     axis_direction = '0 0 1'
   []
 
-  # Upper jaw: sides fixed, top face driven downward
-  #[fix_upper_jaw_sides_x]
-  #  type     = DirichletBC
-  #  variable = disp_x
-  #  boundary = 'upper_jaw_left upper_jaw_right upper_jaw_top'
-  #  value    = 0
-  #[]
-  #[fix_upper_jaw_sides_y]
-  #  type     = DirichletBC
-  #  variable = disp_y
-  #  boundary = 'upper_jaw_left upper_jaw_right'
-  #  value    = 0
-  #[]
-  #[squeeze_upper_jaw]
-  #  type     = FunctionDirichletBC
-  #  variable = disp_y
-  #  boundary = upper_jaw_top
-  #  function = squeeze_ramp_upper
-  #[]
-
-  # Lower jaw: sides fixed, bottom face driven upward
-  #[fix_lower_jaw_sides_x]
-  #  type     = DirichletBC
-  #  variable = disp_x
-  #  boundary = 'lower_jaw_left lower_jaw_right lower_jaw_bottom'
-  #  value    = 0
-  #[]
-  #[fix_lower_jaw_sides_y]
-  #  type     = DirichletBC
-  #  variable = disp_y
-  #  boundary = 'lower_jaw_left lower_jaw_right'
-  #  value    = 0
-  #[]
-  #[squeeze_lower_jaw]
-  #  type     = FunctionDirichletBC
-  #  variable = disp_y
-  #  boundary = lower_jaw_bottom
-  #  function = squeeze_ramp_lower
-  #[]
-
-  [spool_fixed_y]
-    type = DirichletBC
-    variable = disp_y
-    boundary = spool_end
-    value = 0
-  []
-
-  [ghost_tension_x]
-    type = NeumannBC
+  [backtension]
+    type = FunctionNeumannBC
     variable = disp_x
-    boundary = 'wire_right'
-    value = 5.0   # Applies 5 MPa of back-tension. Adjust this up or down if the wire gets too floppy or stretches too much!
+    boundary = spool_end
+    function = backtension_ramp   
   []
 
   [wire_attach_x]
@@ -556,10 +408,10 @@
 
 [Executioner]
   type = Transient
-  solve_type = NEWTON
+  solve_type = PJFNK
 
-  petsc_options_iname = '-ksp_type -snes_linesearch_type'
-  petsc_options_value  = 'preonly    bt'
+  petsc_options_iname = '-ksp_type -ksp_gmres_restart -snes_linesearch_type'
+  petsc_options_value  = 'gmres      200                  bt'
 
   dt       = 0.01
   end_time = 1.5

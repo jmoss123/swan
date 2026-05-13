@@ -168,11 +168,12 @@
   []
 
   [spool_end]
-  type = BoundingBoxNodeSetGenerator
-  input = tie_point_wire
-  new_boundary = 'spool_end'
-  bottom_left = '199.9 16.4 0'
-  top_right   = '200.1 17.1 0' 
+    type = SideSetsFromNormalsGenerator
+    input = tie_point_wire
+    new_boundary = 'spool_end'
+    normals = '1 0 0'
+    variance = 0.1
+    fixed_normal = true 
   []
 []
 
@@ -302,14 +303,19 @@
   []
 
   # Nozzle squeeze
-  # Squeezes 0.104mm (closes 0.1mm gap + 0.004mm compression), holds at t=1
+  # Squeezes 0.1mm (closes 0.1mm gap), holds at t=1
   [squeeze_ramp_upper]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, -0.104 * t, -0.104)'
+    expression = 'if(t <= 1.0, -0.1 * t, -0.1)'
   []
   [squeeze_ramp_lower]
     type = ParsedFunction
-    expression = 'if(t <= 1.0,  0.104 * t,  0.104)'
+    expression = 'if(t <= 1.0,  0.1 * t,  0.1)'
+  []
+
+  [backtension_ramp]
+    type = ParsedFunction
+    expression = 'if(t <= 1.0, 200 *t, 200)'
   []
 
   # Phase indicator for CSV filtering — wire_through_nozzle.i
@@ -328,21 +334,21 @@
     [QuasiStatic]
       [bobbin]
         block = '1'
-        strain = FINITE
+        strain = INCREMENTAL
         add_variables = true
         displacements = 'disp_x disp_y'
       []
 
       [wire]
         block = '2'
-        strain = FINITE
+        strain = INCREMENTAL
         add_variables = true       
         displacements = 'disp_x disp_y'
       []
 
       [jaws]
         block = '3 4'
-        strain = FINITE
+        strain = INCREMENTAL
         add_variables = true
         displacements = 'disp_x disp_y'
       []
@@ -415,26 +421,22 @@
   [upper_contact]
     primary   = upper_jaw_bottom
     secondary = wire_top
-    model     = coulomb
-    friction_coefficient = 0.15
+    model     = frictionless
     formulation = penalty
     penalty     = 1e6
-    normalize_penalty = true
-    search_tolerance = 1.0
-    search_radius    = 2.0
+    search_tolerance = 0.5
+    search_radius    = 0.05
   []
 
   # Wire bottom vs lower jaw top
   [lower_contact]
     primary   = lower_jaw_top
     secondary = wire_bottom
-    model     = coulomb
-    friction_coefficient = 0.15
+    model     = frictionless
     formulation = penalty
     penalty     = 1e6
-    normalize_penalty = true
-    search_tolerance = 1.0
-    search_radius    = 2.0
+    search_tolerance = 0.5
+    search_radius    = 0.05
   []
 []
 
@@ -506,11 +508,11 @@
     function = squeeze_ramp_lower
   []
 
-  [spool_fixed_y]
-  type = DirichletBC
-  variable = disp_y
-  boundary = spool_end
-  value = 0
+  [backtension]
+    type = FunctionNeumannBC
+    variable = disp_x
+    boundary = spool_end
+    function = backtension_ramp
   []
 
   [wire_attach_x]
@@ -549,10 +551,10 @@
 
 [Executioner]
   type = Transient
-  solve_type = NEWTON
+  solve_type = PJFNK
 
-  petsc_options_iname = '-ksp_type -snes_linesearch_type'
-  petsc_options_value  = 'preonly    bt'
+  petsc_options_iname = '-ksp_type -ksp_gmres_restart -snes_linesearch_type'
+  petsc_options_value  = 'gmres      200                  bt'
 
   dt       = 0.01
   end_time = 1.3
@@ -561,9 +563,9 @@
 
   nl_rel_tol = 1e-4
   nl_abs_tol = 1e-3
-  nl_max_its = 15
+  nl_max_its = 50
 
-  l_max_its = 100
+  l_max_its = 200
   l_tol     = 1e-3
 
   [TimeStepper]
@@ -571,8 +573,8 @@
     dt = 0.01
     cutback_factor = 0.5
     growth_factor  = 1.2
-    optimal_iterations  = 15
-    iteration_window    = 7
+    optimal_iterations  = 50
+    iteration_window    = 10
   []
 
   automatic_scaling    = true
