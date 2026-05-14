@@ -304,19 +304,14 @@
   []
 
   # Nozzle squeeze
-  # Squeezes 0.1mm (closes 0.1mm gap), holds at t=1
+  # Squeezes 0.11mm (closes 0.1mm gap + 0.01mm compression), holds at t=1
   [squeeze_ramp_upper]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, -0.1 * t, -0.1)'
+    expression = 'if(t <= 1.0, -0.11 * t, -0.11)'
   []
   [squeeze_ramp_lower]
     type = ParsedFunction
-    expression = 'if(t <= 1.0,  0.1 * t,  0.1)'
-  []
-
-  [backtension_ramp]
-    type = ParsedFunction
-    expression = 'if(t <= 1.0, 200 *t, 200)'
+    expression = 'if(t <= 1.0,  0.11 * t,  0.11)'
   []
 
   # Phase indicator for CSV filtering — wire_through_nozzle.i
@@ -408,14 +403,15 @@
 [Contact]
   # Wire bottom vs bobbin outer face
   [wire_bobbin]
-    primary              = 'bobbin_full_outer'
-    secondary            = 'wire_bottom'
-    model                = frictionless
-    formulation          = penalty
-    penalty              = 1e6
-    normalize_penalty    = false
-    search_radius        = 0.1
-    search_tolerance     = 0.01
+    primary   = 'bobbin_outer'
+    secondary = 'wire_bottom'
+    model     = frictionless
+    formulation = penalty
+    penalty = 1e6
+    normalize_penalty = true
+    search_tolerance = 3.0
+    search_radius    = 15.0
+    normal_smoothing_distance = 0.15
   []
 
   # Wire top vs upper jaw bottom
@@ -556,26 +552,24 @@
   [SMP]
     type = SMP
     full = true
-    petsc_options_iname = '-pc_type -pc_factor_mat_solver_package'
-    petsc_options_value  = 'lu       mumps'
   []
 []
 
 [Executioner]
   type = Transient
-  
-  solve_type = NEWTON
-  petsc_options_iname = '-pc_type -pc_factor_mat_solver_package'
-  petsc_options_value  = 'lu       mumps'
+  solve_type = PJFNK
 
-  dt       = 0.01
-  end_time = 1.3
+  petsc_options_iname = '-pc_type -pc_hypre_type -ksp_type -snes_linesearch_type'
+  petsc_options_value  = 'hypre    boomeramg      gmres     l2'
+
+  dt       = 0.05
+  end_time = 1.5
   dtmin    = 1e-8
   dtmax    = 0.05
 
   nl_rel_tol = 1e-4
   nl_abs_tol = 1e-3
-  nl_max_its = 50
+  nl_max_its = 100
 
   l_max_its = 200
   l_tol     = 1e-3
@@ -590,6 +584,7 @@
   []
 
   automatic_scaling    = true
+  compute_scaling_once = false
 []
 
 
@@ -599,12 +594,12 @@
 [Outputs]
   [exodus]
     type = Exodus
-    interval = 75
+    interval = 25
   []
 
   [csv]
     type = CSV
-    interval = 75
+    interval = 25
   []
 
   print_linear_residuals = true
@@ -661,40 +656,40 @@
  # []
 
   # Friction monitoring
-  [nozzle_friction_force_upper]
+  [friction_force_upper]
     type = SideIntegralVariablePostprocessor
     variable = stress_xy
-    boundary = upper_jaw_bottom
+    boundary = wire_top
   []
 
-  [nozzle_friction_force_lower]
+  [friction_force_lower]
     type = SideIntegralVariablePostprocessor
     variable = stress_xy
-    boundary = lower_jaw_top
+    boundary = wire_bottom
   []
 
   [total_friction_force_N]
     type = ParsedPostprocessor
-    expression = 'abs(nozzle_friction_force_upper) + abs(nozzle_friction_force_lower)'
-    pp_names = 'nozzle_friction_force_upper nozzle_friction_force_lower'
+    expression = 'abs(friction_force_upper) + abs(friction_force_lower)'
+    pp_names = 'friction_force_upper friction_force_lower'
   []
 
   [nozzle_normal_force_upper]
     type = SideIntegralVariablePostprocessor
     variable = stress_yy
-    boundary = upper_jaw_bottom
+    boundary = wire_top
   []
 
   [nozzle_normal_force_lower]
     type = SideIntegralVariablePostprocessor
     variable = stress_yy
-    boundary = lower_jaw_top
+    boundary = wire_bottom
   []
 
   [total_normal_force_N]
     type = ParsedPostprocessor
-    expression = 'abs(nozzle_normal_force_upper) + abs(nozzle_normal_force_lower)'
-    pp_names = 'nozzle_normal_force_upper nozzle_normal_force_lower'
+    expression = 'abs(normal_force_upper) + abs(normal_force_lower)'
+    pp_names = 'normal_force_upper normal_force_lower'
   []
 
   # Phase indicator
