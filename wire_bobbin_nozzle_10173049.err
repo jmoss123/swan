@@ -1,0 +1,22 @@
+Restoring modules from user's moose, for system: "Stanage"
+
+[31m
+*** ERROR ***
+/users/mea21jpm/projects/swan/input_files/wire_bobbin_nozzle_combined.i:513.5:
+BCs/backtension/boundary: the following side sets (ids) do not exist on the mesh: spool_end (57)
+
+MOOSE distinguishes between "node sets" and "side sets" depending on whether
+you are using "Nodal" or "Integrated" BCs respectively. Node sets corresponding
+to your side sets are constructed for you by default.
+
+Try setting "Mesh/construct_side_list_from_node_list=true" if you see this error.
+Note: If you are running with adaptivity you should prefer using side sets.[39m
+
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 0 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
