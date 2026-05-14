@@ -509,13 +509,6 @@
     function = squeeze_ramp_lower
   []
 
-  [backtension]
-    type = FunctionNeumannBC
-    variable = disp_x
-    boundary = spool_end
-    function = backtension_ramp
-  []
-
   [wire_attach_x]
     type = DisplacementAboutAxis
     variable = disp_x
@@ -688,8 +681,8 @@
 
   [total_normal_force_N]
     type = ParsedPostprocessor
-    expression = 'abs(normal_force_upper) + abs(normal_force_lower)'
-    pp_names = 'normal_force_upper normal_force_lower'
+    expression = 'abs(nozzle_normal_force_upper) + abs(nozzle_normal_force_lower)'
+    pp_names = 'nozzle_normal_force_upper nozzle_normal_force_lower'
   []
 
   # Phase indicator
