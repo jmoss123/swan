@@ -26,9 +26,7 @@
 # MESH
 # ============================================================
 [Mesh]
-  patch_update_strategy = iteration
-  patch_size = 100
-  # BOBBIN: Load from gmsh file
+  # BOBBIN: loaded from gmsh
   [bobbin]
     type = FileMeshGenerator
     file = "bobbin_fillet.msh"
@@ -39,10 +37,10 @@
     type = GeneratedMeshGenerator
     dim = 2
     xmin = 13.5
-    xmax = 300
+    xmax = 200
     ymin = 16.5
     ymax = 17.0
-    nx = 1146        # ~0.25mm elements along wire length
+    nx = 185        # ~1mm elements along wire length
     ny = 2
     elem_type = QUAD4
     boundary_name_prefix = wire
@@ -64,7 +62,7 @@
     xmax = 110
     ymin = 17.1
     ymax = 21.1
-    nx = 40
+    nx = 20
     ny = 8
     elem_type = QUAD4
     boundary_name_prefix = upper_jaw
@@ -86,7 +84,7 @@
     xmax = 110
     ymin = 12.4
     ymax = 16.4
-    nx = 40
+    nx = 20
     ny = 8
     elem_type = QUAD4
     boundary_name_prefix = lower_jaw
@@ -106,38 +104,22 @@
     inputs = 'bobbin wire_id upper_jaw_id lower_jaw_id'
   []
 
-  [bobbin_full_outer_boundary]
-    type = SideSetsAroundSubdomainGenerator
-    input = combined
-    new_boundary = 'bobbin_full_outer'
-    block = '1'           # bobbin block ID from gmsh
-  []
-
-  [wire_all_boundary]
-    type = SideSetsAroundSubdomainGenerator
-    input = bobbin_full_outer_boundary
-    new_boundary = 'wire_all'
-    block = '2' 
-  []
-
   # Wire top face (upper jaw contact secondary)
   [wire_top_boundary]
-    type = SideSetsFromNormalsGenerator
-    input = wire_all_boundary
-    boundaries = 'wire_all'
+    type = SideSetsAroundSubdomainGenerator
+    input = combined
     new_boundary = 'wire_top'
-    normals = '0 1 0'
-    variance = 0.1
+    block = '2'
+    normal = '0 1 0'
   []
 
   # Wire bottom face (bobbin contact + lower jaw contact secondary)
   [wire_bottom_boundary]
-    type = SideSetsFromNormalsGenerator
+    type = SideSetsAroundSubdomainGenerator
     input = wire_top_boundary
-    boundaries = 'wire_all'
     new_boundary = 'wire_bottom'
-    normals = '0 -1 0'
-    variance = 0.1
+    block = '2'
+    normal = '0 -1 0'
   []
 
   # Upper jaw bottom face (contact primary)
@@ -158,23 +140,32 @@
     normal = '0 1 0'
   []
 
+  # Bobbin tie point
+  [tie_point_bobbin]
+    type = ExtraNodesetGenerator
+    input = lower_jaw_top_boundary
+    new_boundary = 'tie_point_bobbin'
+    coord = '13.5 16.5 0'
+    tolerance = 0.5
+  []
+
   # Wire attachment nodes at bobbin vertex
   [tie_point_wire]
     type = BoundingBoxNodeSetGenerator
-    input = lower_jaw_top_boundary
+    input = tie_point_bobbin
     new_boundary = 'tie_point_wire'
     bottom_left = '13.4 16.4 0'
     top_right   = '13.6 17.1 0'
   []
 
-  [spool_end]
-    type = SideSetsFromNormalsGenerator
+  # Wire feed guide
+  # Sits between nozzle (x=90..110) and bobbin (x=0): wire path is right->nozzle->feed->bobbin
+  [feed_point]
+    type = BoundingBoxNodeSetGenerator
     input = tie_point_wire
-    new_boundary = 'spool_end'
-    normals = '1 0 0'
-    variance = 0.1
-    fixed_normal = true
-    boundaries = 'wire_all' 
+    new_boundary = 'feed_point'
+    bottom_left = '60.0 16.0 0'
+    top_right   = '70.0 17.5 0'
   []
 []
 
@@ -221,7 +212,6 @@
     rank_two_tensor = stress
     index_i = 0
     index_j = 0
-    block = '2'
   []
   [stress_yy_aux]
     type = RankTwoAux
@@ -229,7 +219,6 @@
     rank_two_tensor = stress
     index_i = 1
     index_j = 1
-    block = '2'
   []
   [stress_xy_aux]
     type = RankTwoAux
@@ -237,7 +226,6 @@
     rank_two_tensor = stress
     index_i = 0
     index_j = 1
-    block = '2'
   []
   [strain_xx_aux]
     type = RankTwoAux
@@ -245,7 +233,6 @@
     rank_two_tensor = mechanical_strain
     index_i = 0
     index_j = 0
-    block = '2'
   []
   [strain_yy_aux]
     type = RankTwoAux
@@ -253,7 +240,6 @@
     rank_two_tensor = mechanical_strain
     index_i = 1
     index_j = 1
-    block = '2'
   []
   [strain_xy_aux]
     type = RankTwoAux
@@ -261,14 +247,12 @@
     rank_two_tensor = mechanical_strain
     index_i = 0
     index_j = 1
-    block = '2'
   []
   [vonmises_aux]
     type = RankTwoScalarAux
     variable = vonmises
     rank_two_tensor = stress
     scalar_type = VonMisesStress
-    block = '2'
   []
 []
 
@@ -280,13 +264,13 @@
   # Angular velocity — zero during squeeze, 1 rev/s during winding
   [omega]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, 0.0, 6.28318)'
+    expression = 'if(t <= 1.0, 0.0, 3.14159)'
   []
 
   # Cumulative rotation angle — zero during Phase 1, ramps 0->2*pi in Phase 2
   [theta]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, 0.0, 6.28318 * (t - 1.0))'
+    expression = 'if(t <= 1.0, 0.0, 3.14159 * (t - 1.0))'
   []
 
   # Rotation displacement components — wire_bobbin_sim.i (unchanged)
@@ -329,24 +313,19 @@
   [SolidMechanics]
     [QuasiStatic]
       [bobbin]
+        strain = FINITE
         block = '1'
-        strain = FINITE
         add_variables = true
-        displacements = 'disp_x disp_y'
       []
-
       [wire]
+        strain = FINITE
         block = '2'
-        strain = FINITE
-        add_variables = true       
-        displacements = 'disp_x disp_y'
-      []
-
-      [jaws]
-        block = '3 4'
-        strain = FINITE
         add_variables = true
-        displacements = 'disp_x disp_y'
+      []
+      [nozzle]                  
+        strain = SMALL
+        block = '3 4'
+        add_variables = true
       []
     []
   []
@@ -357,11 +336,11 @@
 # MATERIALS
 # ============================================================
 [Materials]
-  # Bobbin: Nylon 66 
+  # Bobbin: steel 
   [bobbin_elasticity]
     type = ComputeIsotropicElasticityTensor
-    youngs_modulus = 10000 # MPa
-    poissons_ratio = 0.38
+    youngs_modulus = 200000 # MPa
+    poissons_ratio = 0.3
     block = '1'
   []
   [bobbin_stress]
@@ -376,7 +355,6 @@
     poissons_ratio = 0.34
     block = '2'
   []
-
   [wire_stress]
     type = ComputeFiniteStrainElasticStress
     block = '2'
@@ -390,7 +368,7 @@
     block = '3 4'
   []
   [nozzle_stress]
-    type = ComputeFiniteStrainElasticStress
+    type = ComputeLinearElasticStress
     block = '3 4'
   []
 []
@@ -407,11 +385,10 @@
     secondary = 'wire_bottom'
     model     = frictionless
     formulation = penalty
-    penalty = 1e6
+    search_tolerance = 1.0
+    search_radius    = 2.0
+    penalty          = 1e6
     normalize_penalty = true
-    search_tolerance = 3.0
-    search_radius    = 15.0
-    normal_smoothing_distance = 0.15
   []
 
   # Wire top vs upper jaw bottom
@@ -421,10 +398,10 @@
     model     = coulomb
     friction_coefficient = 0.15
     formulation = penalty
-    normalise_penalty = true
     penalty     = 1e6
+    normalize_penalty = true
     search_tolerance = 1.0
-    search_radius    = 0.1
+    search_radius    = 2.0
   []
 
   # Wire bottom vs lower jaw top
@@ -432,12 +409,12 @@
     primary   = lower_jaw_top
     secondary = wire_bottom
     model     = coulomb
-    friction_coefficiert = 0.15
+    friction_coefficient = 0.15
     formulation = penalty
     penalty     = 1e6
-    normalise_penalty = true
+    normalize_penalty = true
     search_tolerance = 1.0
-    search_radius    = 0.1
+    search_radius    = 2.0
   []
 []
 
@@ -451,7 +428,7 @@
   [bobbin_rotate_x]
     type = DisplacementAboutAxis
     variable = disp_x
-    boundary = 'bobbin_inner'
+    boundary = 'bobbin_inner tie_point_wire'
     component = 0
     function = theta
     angle_units = radians
@@ -461,7 +438,7 @@
   [bobbin_rotate_y]
     type = DisplacementAboutAxis
     variable = disp_y
-    boundary = 'bobbin_inner'
+    boundary = 'bobbin_inner tie_point_wire'
     component = 1
     function = theta
     angle_units = radians
@@ -509,38 +486,17 @@
     function = squeeze_ramp_lower
   []
 
-  [wire_attach_x]
-    type = DisplacementAboutAxis
-    variable = disp_x
-    boundary = 'tie_point_wire'
-    component = 0
-    function = theta
-    angle_units = radians
-    axis_origin = '0 0 0'
-    axis_direction = '0 0 1'
-  []
-  [wire_attach_y]
-    type = DisplacementAboutAxis
+  # Wire feed guide: fixed in y, free in x
+  # Bobbin rotation in Phase 2 provides the x-direction pull
+  [feed_fixed_y]
+    type = DirichletBC
     variable = disp_y
-    boundary = 'tie_point_wire'
-    component = 1
-    function = theta
-    angle_units = radians
-    axis_origin = '0 0 0'
-    axis_direction = '0 0 1'
-  []
-
-  [spool_fixed_y]
-    type     = DirichletBC
-    variable = disp_y
-    boundary = spool_end
-    value    = 0
+    boundary = feed_point
+    value = 0
   []
 []
 
-# ============================================================
-# PRECONDITIONING & EXECUTIONER
-# ============================================================
+
 [Preconditioning]
   [SMP]
     type = SMP
@@ -548,32 +504,36 @@
   []
 []
 
+
+# ============================================================
+# EXECUTIONER
+# ============================================================
 [Executioner]
   type = Transient
-  solve_type = PJFNK
+  solve_type = PJFNK # More robust for simulataneous contact problems
 
   petsc_options_iname = '-pc_type -pc_hypre_type -ksp_type -snes_linesearch_type'
   petsc_options_value  = 'hypre    boomeramg      gmres     l2'
 
-  dt       = 0.05
-  end_time = 1.5
+  dt       = 0.01
+  end_time = 3.0
   dtmin    = 1e-8
-  dtmax    = 0.05
+  dtmax    = 0.02
 
-  nl_rel_tol = 1e-4
-  nl_abs_tol = 1e-3
+  nl_rel_tol = 1e-5
+  nl_abs_tol = 1e-4
   nl_max_its = 100
 
   l_max_its = 200
-  l_tol     = 1e-3
+  l_tol     = 1e-4
 
   [TimeStepper]
     type = IterationAdaptiveDT
     dt = 0.01
     cutback_factor = 0.5
     growth_factor  = 1.2
-    optimal_iterations  = 50
-    iteration_window    = 10
+    optimal_iterations  = 30
+    iteration_window    = 5
   []
 
   automatic_scaling    = true
@@ -587,26 +547,18 @@
 [Outputs]
   [exodus]
     type = Exodus
-    interval = 25
+    interval = 10
   []
-
   [csv]
     type = CSV
-    interval = 25
+    interval = 10
   []
-
   print_linear_residuals = true
 
   [mesh_out]
     type = Exodus
     execute_on = 'INITIAL'
     file_base  = 'mesh_check'
-  []
-
-  [checkpoint]
-    type = Checkpoint
-    num_files = 3
-    interval = 20
   []
 []
 
@@ -616,12 +568,16 @@
 # ============================================================
 [Postprocessors]
   # Wire stress/strain
+  [wire_max_stress]
+    type = ElementExtremeValue
+    variable = stress_xx
+    block = '2'
+  []
   [wire_avg_strain]
     type = ElementAverageValue
     variable = strain_xx
     block = '2'
   []
-
   [wire_max_vonmises]
     type = ElementExtremeValue
     variable = vonmises
@@ -633,20 +589,42 @@
     type = FunctionValuePostprocessor
     function = theta
   []
+  [tie_point_disp_x]
+    type = NodalExtremeValue
+    variable = disp_x
+    boundary = tie_point_wire
+  []
+  [tie_point_disp_y]
+    type = NodalExtremeValue
+    variable = disp_y
+    boundary = tie_point_wire
+  []
 
   # Wire tension at feed guide
   # Area = 0.5mm thickness x 1mm unit depth = 0.5 mm^2
- # [feed_axial_force]
- #   type = PointValue
- #   variable = stress_xx
- #   point = '63.5 16.5 0'
- # []
+  [feed_axial_force]
+    type = PointValue
+    variable = stress_xx
+    point = '63.5 16.5 0'
+  []
+  [tension_magnitude]
+    type = ParsedPostprocessor
+    expression = 'feed_axial_force * 0.5'
+    pp_names = 'feed_axial_force'
+  []
 
- # [tension_magnitude]
- #   type = ParsedPostprocessor
- #   expression = 'feed_axial_force * 0.5'
- #   pp_names = 'feed_axial_force'
- # []
+  # Nozzle contact force
+  # Area = nozzle width (20mm) x unit depth (1mm) = 20 mm^2
+  [nozzle_stress_yy]
+    type = PointValue
+    variable = stress_yy
+    point = '100.0 16.75 0'
+  []
+  [contact_force]
+    type = ParsedPostprocessor
+    expression = 'abs(nozzle_stress_yy) * 20.0'
+    pp_names = 'nozzle_stress_yy'
+  []
 
   # Friction monitoring
   [friction_force_upper]
@@ -654,35 +632,36 @@
     variable = stress_xy
     boundary = wire_top
   []
-
   [friction_force_lower]
     type = SideIntegralVariablePostprocessor
     variable = stress_xy
     boundary = wire_bottom
   []
-
   [total_friction_force_N]
     type = ParsedPostprocessor
     expression = 'abs(friction_force_upper) + abs(friction_force_lower)'
     pp_names = 'friction_force_upper friction_force_lower'
   []
-
-  [nozzle_normal_force_upper]
+  [normal_force_upper]
     type = SideIntegralVariablePostprocessor
     variable = stress_yy
     boundary = wire_top
   []
-
-  [nozzle_normal_force_lower]
+  [normal_force_lower]
     type = SideIntegralVariablePostprocessor
     variable = stress_yy
     boundary = wire_bottom
   []
-
   [total_normal_force_N]
     type = ParsedPostprocessor
-    expression = 'abs(nozzle_normal_force_upper) + abs(nozzle_normal_force_lower)'
-    pp_names = 'nozzle_normal_force_upper nozzle_normal_force_lower'
+    expression = 'abs(normal_force_upper) + abs(normal_force_lower)'
+    pp_names = 'normal_force_upper normal_force_lower'
+  []
+  [effective_friction_coefficient]
+    type = ParsedPostprocessor
+    expression = 'if(total_normal_force_N > 1e-6,
+                    total_friction_force_N / total_normal_force_N, 0)'
+    pp_names = 'total_friction_force_N total_normal_force_N'
   []
 
   # Phase indicator
