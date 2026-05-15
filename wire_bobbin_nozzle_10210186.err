@@ -1,0 +1,16 @@
+Restoring modules from user's moose, for system: "Stanage"
+
+[31m
+*** ERROR ***
+The following occurred in the Problem 'MOOSE Problem' of type FEProblem.
+
+Unable to find function backtension_ramp[39m
+
+--------------------------------------------------------------------------
+MPI_ABORT was invoked on rank 0 in communicator MPI_COMM_WORLD
+with errorcode 1.
+
+NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
+You may or may not see output from other processes, depending on
+exactly when Open MPI kills them.
+--------------------------------------------------------------------------
