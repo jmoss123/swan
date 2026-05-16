@@ -5,11 +5,11 @@ import time
 from HX711 import SimpleHX711, Mass
 
 # Configuration
-DT_PIN  = 5   # GPIO 5, Pi pin 29
-SCK_PIN = 6   # GPIO 6, Pi pin 31
+DT_PIN  = 6   # GPIO 6, Pi pin 31
+SCK_PIN = 5   # GPIO 5, Pi pin 29
 
-REFERENCE_UNIT = -94      # Replace with calibration value if required
-OFFSET         = 117625      # Replace with calibration value if required
+REFERENCE_UNIT = -71      # Replace with calibration value if required
+OFFSET         = 124815      # Replace with calibration value if required
 
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 OUTPUT_FILE = f"readings/cycle_{timestamp}.csv"
@@ -32,16 +32,20 @@ print("Collecting... Press Ctrl+C to stop")
 # Read loop
 try:
     while True:
-        value = hx.weight(1).value
+        value = hx.weight(1).getValue()
         timestamp = round(time.time() - start_time, 4)
-		readings.append({"time_s": timestamp, "tension_g": value})
+        readings.append({"time_s": timestamp, "tension_g": value})
 
 except KeyboardInterrupt:
-	print(f"\nStopped. {len(readings)} readings collected. ")
+    print(f"\nStopped. {len(readings)} readings collected. ")
 
 with open(OUTPUT_FILE, "w", newline="") as f:
-	writer = csv.DictWriter(f, fieldnames=["time_s", "tension_g"])
-	writer.writeheader()
-	writer.writerows(readings)
+    writer = csv.DictWriter(f, fieldnames=["time_s", "tension_g"])
+    writer.writeheader()
+    writer.writerows(readings)
 
 print(f"Saved to {OUTPUT_FILE}")
+
+with open(OUTPUT_FILE, "rb") as f:
+    response = requests.post(API_URL, files={"file": f})
+    print(f"Uploaded: {response.status_code} - {response.text}")

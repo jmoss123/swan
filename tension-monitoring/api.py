@@ -1,5 +1,7 @@
 import os
-from flask import Flask, jsonify, request
+import csv
+import io
+from flask import Flask, jsonify, request, send_file
 
 app = Flask(__name__)
 
@@ -39,9 +41,28 @@ def upload_csv():
     file = request.files['file']
     if file.filename == '':
         return jsonify({"error": "Empty filename"}), 400
+
+    # Save the file
     save_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(save_path)
-    return jsonify({"message": f"Saved {file.filename}"}), 201
+
+    # Parse CSV and add to readings
+    with open(save_path, newline="") as f:
+        reader = csv.DictReader(f)
+        new_readings = []
+        for row in reader:
+            entry = {
+                "file": file.filename,
+                "time_s": float(row["time_s"]),
+                "tension_g": float(row["tension_g"])
+            }
+            readings.append(entry)
+            new_readings.append(entry)
+
+    return jsonify({
+        "message": f"Saved {file.filename}",
+        "readings_added": len(new_readings)
+    }), 201
 
 @app.route('/', methods=['GET'])
 def index():
