@@ -19,7 +19,7 @@ hx.setUnit(Mass.Unit.G)
 hx.zero()
 print("Scale zeroed.")
 
-imput("Press ENTER to start collecting...")
+input("Press ENTER to start collecting...")
 
 start_time = time.time()
 readings = []
@@ -31,7 +31,7 @@ try:
     while True:
         value = hx.weight(1).value
         timestamp = round(time.time() - start_time, 4)
-	readings.append({"time_s": timestamp, "tension_g": value})
+		readings.append({"time_s": timestamp, "tension_g": value})
 
 except KeyboardInterrupt:
 	print(f"\nStopped. {len(readings)} readings collected. ")

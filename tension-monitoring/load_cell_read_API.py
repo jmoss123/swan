@@ -55,4 +55,4 @@ try:
 
 except KeyboardInterrupt:
     print("\nShutting down...")
-    GPIO.cleanup()
+    gpio.cleanup()
