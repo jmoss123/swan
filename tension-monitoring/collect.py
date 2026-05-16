@@ -1,4 +1,5 @@
 import csv
+import requests
 from datetime import datetime
 import time
 from HX711 import SimpleHX711, Mass
@@ -12,6 +13,8 @@ OFFSET         = 117625      # Replace with calibration value if required
 
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 OUTPUT_FILE = f"readings/cycle_{timestamp}.csv"
+
+API_URL = "http://192.168.1.173:5000/upload_csv"
 
 # Initialise
 hx = SimpleHX711(DT_PIN, SCK_PIN, REFERENCE_UNIT, OFFSET)
