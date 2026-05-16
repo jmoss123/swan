@@ -40,7 +40,7 @@
     xmax = 200
     ymin = 16.5
     ymax = 17.0
-    nx = 185        # ~1mm elements along wire length
+    nx = 740        # ~1mm elements along wire length
     ny = 2
     elem_type = QUAD4
     boundary_name_prefix = wire
@@ -264,13 +264,13 @@
   # Angular velocity — zero during squeeze, 1 rev/s during winding
   [omega]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, 0.0, 3.14159)'
+    expression = 'if(t <= 1.0, 0.0, 6.2831)'
   []
 
   # Cumulative rotation angle — zero during Phase 1, ramps 0->2*pi in Phase 2
   [theta]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, 0.0, 3.14159 * (t - 1.0))'
+    expression = 'if(t <= 1.0, 0.0, 6.2831 * (t - 1.0))'
   []
 
   # Rotation displacement components — wire_bobbin_sim.i (unchanged)
@@ -288,14 +288,14 @@
   []
 
   # Nozzle squeeze
-  # Squeezes 0.11mm (closes 0.1mm gap + 0.01mm compression), holds at t=1
+  # Squeezes 0.105mm (closes 0.1mm gap + 0.005mm compression), holds at t=1
   [squeeze_ramp_upper]
     type = ParsedFunction
-    expression = 'if(t <= 1.0, -0.11 * t, -0.11)'
+    expression = 'if(t <= 1.0, -0.105 * t, -0.105)'
   []
   [squeeze_ramp_lower]
     type = ParsedFunction
-    expression = 'if(t <= 1.0,  0.11 * t,  0.11)'
+    expression = 'if(t <= 1.0,  0.105 * t,  0.105)'
   []
 
   # Phase indicator for CSV filtering — wire_through_nozzle.i
@@ -339,8 +339,8 @@
   # Bobbin: steel 
   [bobbin_elasticity]
     type = ComputeIsotropicElasticityTensor
-    youngs_modulus = 200000 # MPa
-    poissons_ratio = 0.3
+    youngs_modulus = 10000 # MPa
+    poissons_ratio = 0.35
     block = '1'
   []
   [bobbin_stress]
@@ -386,7 +386,7 @@
     model     = frictionless
     formulation = penalty
     search_tolerance = 1.0
-    search_radius    = 2.0
+    search_radius    = 5.0
     penalty          = 1e6
     normalize_penalty = true
   []
@@ -485,15 +485,6 @@
     boundary = lower_jaw_bottom
     function = squeeze_ramp_lower
   []
-
-  # Wire feed guide: fixed in y, free in x
-  # Bobbin rotation in Phase 2 provides the x-direction pull
-  [feed_fixed_y]
-    type = DirichletBC
-    variable = disp_y
-    boundary = feed_point
-    value = 0
-  []
 []
 
 
@@ -516,7 +507,7 @@
   petsc_options_value  = 'hypre    boomeramg      gmres     l2'
 
   dt       = 0.01
-  end_time = 3.0
+  end_time = 2.0
   dtmin    = 1e-8
   dtmax    = 0.02
 
@@ -525,7 +516,7 @@
   nl_max_its = 100
 
   l_max_its = 200
-  l_tol     = 1e-4
+  l_tol     = 1e-3
 
   [TimeStepper]
     type = IterationAdaptiveDT
