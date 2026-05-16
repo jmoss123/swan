@@ -7,7 +7,7 @@ gmsh.model.add("bobbin")
 L  = 16.5   # outer half-size (mm)
 t = 2       # thickness (mm)
 r = 3.0     # outer fillet radius (mm)
-ms = 0.5    # mesh size (mm)
+ms = 1.0    # mesh size (mm)
 
 # Derived inner dimensions (guarantees constant wall thickness)
 Li = L - t          # inner half-size = 14.5mm
@@ -101,26 +101,13 @@ gmsh.model.setPhysicalName(1, 2, "bobbin_inner")
 
 # MESH SETTINGS
 
-gmsh.option.setNumber("Mesh.CharacteristicLengthMin", 0.4)
-gmsh.option.setNumber("Mesh.CharacteristicLengthMax", 0.6)
+gmsh.option.setNumber("Mesh.CharacteristicLengthMin", 0.8)
+gmsh.option.setNumber("Mesh.CharacteristicLengthMax", 1.2)
 gmsh.option.setNumber("Mesh.ElementOrder", 1)
 gmsh.option.setNumber("Mesh.RecombineAll", 1)    # Prefer quads
 gmsh.option.setNumber("Mesh.Algorithm", 8)       # Frontal-Delaunay for quads
 
-# Create a boundary layer field on the outer surface
-f = gmsh.model.mesh.field
-
-skin_tag = f.add("BoundaryLayer")
-f.setNumbers(skin_tag, "CurvesList", [lo_bot, arc_br, lo_rgt, arc_tr,
-                                       lo_top, arc_tl, lo_lft, arc_bl])
-f.setNumber(skin_tag, "Size", 0.5)        # thickness of outer ring (mm) — match your ms
-f.setNumber(skin_tag, "NbLayers", 1)      # just 1 layer of elements
-f.setNumber(skin_tag, "Ratio", 1.0)
-f.setAsBoundaryLayer(skin_tag)
-
-# After mesh generation, get elements adjacent to bobbin_outer boundary
 gmsh.model.mesh.generate(2)
-
 gmsh.write("bobbin_fillet.msh")
 gmsh.write("bobbin_fillet.vtk") # for visualization in Paraview
 gmsh.finalize()
